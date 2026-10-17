@@ -1,0 +1,238 @@
+name: Real-World TOML Compatibility
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  toml-capture:
+    name: TOML Capture on macOS ARM64
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout REW
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build REW
+        run: GOTOOLCHAIN=local go build -o rew ./cmd/rew
+
+      - name: Prepare pinned TOML fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = arm64
+
+          expected="d733fc535e4a9f3c454e421a87b90ade5d49bf31"
+
+          git clone \
+            https://github.com/BurntSushi/toml.git \
+            "$RUNNER_TEMP/toml-upstream"
+
+          git -C "$RUNNER_TEMP/toml-upstream" \
+            checkout --detach "$expected"
+
+          actual="$(git -C "$RUNNER_TEMP/toml-upstream" rev-parse HEAD)"
+          test "$actual" = "$expected"
+
+          mkdir -p "$RUNNER_TEMP/toml-fixture"
+
+          git -C "$RUNNER_TEMP/toml-upstream" archive HEAD \
+            | tar -x -C "$RUNNER_TEMP/toml-fixture"
+
+          cat > "$RUNNER_TEMP/toml-fixture/rew_regression_failure.go" <<'EOF'
+          package toml
+
+          var rewRegressionFailure = rewIntentionallyUndefined
+          EOF
+
+          test -f "$RUNNER_TEMP/toml-fixture/go.mod"
+          test -f "$RUNNER_TEMP/toml-fixture/rew_regression_failure.go"
+
+      - name: Capture and verify TOML failure
+        shell: bash
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+          GOFLAGS: ""
+          GOWORK: "off"
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+
+          cd "$RUNNER_TEMP/toml-fixture"
+
+          set +e
+          "$GITHUB_WORKSPACE/rew" capture \
+            --v3 \
+            --include-go-sources \
+            --include-go-embed \
+            -- go build ./... \
+            > "$RUNNER_TEMP/toml-capture.stdout" \
+            2> "$RUNNER_TEMP/toml-capture.stderr"
+          capture_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/toml-capture.stdout"
+          cat "$RUNNER_TEMP/toml-capture.stderr"
+
+          test "$capture_exit" -eq 1
+          test -s failure.bfc
+
+          python3 - failure.bfc <<'PY'
+          import json
+          import sys
+          import tarfile
+
+          with tarfile.open(sys.argv[1], "r:") as archive:
+              member = archive.extractfile("manifest.json")
+              if member is None:
+                  raise SystemExit("manifest.json missing")
+              manifest = json.load(member)
+
+          paths = [f["path"] for f in manifest["workspace"]["files"]]
+          sources = [p for p in paths if p.endswith(".go")]
+          embedded = [
+              p for p in paths
+              if p.startswith("internal/toml-test/tests/")
+          ]
+
+          assert manifest["schema_version"] == 3
+          assert manifest["runtime"] == {
+              "kind": "go", "version": "1.26.6"
+          }
+          assert manifest["execution"]["argv"] == [
+              "go", "build", "./..."
+          ]
+          assert manifest["execution"]["exit_code"] == 1
+          assert "undefined: rewIntentionallyUndefined" in (
+              manifest["execution"]["stderr"]
+          )
+
+          assert len(paths) == 1073, len(paths)
+          assert len(sources) == 22, len(sources)
+          assert len(embedded) == 1049, len(embedded)
+          assert len(paths) == len(set(paths))
+
+          assert "go.mod" in paths
+          assert "go.sum" in paths
+          assert "rew_regression_failure.go" in paths
+          assert not any(
+              p == ".DS_Store"
+              or p.startswith(".git/")
+              or p.endswith("/.DS_Store")
+              for p in paths
+          )
+          assert len(manifest.get("go_modules", [])) == 0
+
+          print("PASS: real-world TOML manifest verified")
+          PY
+
+          cp failure.bfc "$RUNNER_TEMP/rew-toml-v3.bfc"
+
+      - name: Upload verified TOML capsule
+        uses: actions/upload-artifact@v6
+        with:
+          name: real-world-toml-v3-capsule
+          path: ${{ runner.temp }}/rew-toml-v3.bfc
+          if-no-files-found: error
+          retention-days: 7
+
+  toml-replay:
+    name: TOML Offline Replay on Linux AMD64
+    runs-on: ubuntu-24.04
+    needs: toml-capture
+
+    steps:
+      - name: Checkout REW
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build REW
+        run: GOTOOLCHAIN=local go build -o rew ./cmd/rew
+
+      - name: Download TOML capsule
+        uses: actions/download-artifact@v6
+        with:
+          name: real-world-toml-v3-capsule
+          path: ${{ runner.temp }}/toml-capsule
+
+      - name: Verify Linux Docker environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = Linux
+          test "$(uname -m)" = x86_64
+
+          docker version
+          docker info
+
+      - name: Replay real-world TOML failure offline
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capsule="$RUNNER_TEMP/toml-capsule/rew-toml-v3.bfc"
+          test -s "$capsule"
+
+          echo "=== CAPSULE SHA-256 ==="
+          sha256sum "$capsule"
+
+          echo "=== REPLAY ==="
+          set +e
+          ./rew replay \
+            --v3 \
+            --allow-command \
+            --memory 1g \
+            "$capsule" \
+            > "$RUNNER_TEMP/toml-replay.stdout" \
+            2> "$RUNNER_TEMP/toml-replay.stderr"
+          replay_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/toml-replay.stdout"
+          cat "$RUNNER_TEMP/toml-replay.stderr"
+
+          if [ "$replay_exit" -ne 0 ]; then
+            echo "FAIL: REW replay exit=$replay_exit"
+            exit 1
+          fi
+
+          if ! grep -q 'Outcome: *reproduced' \
+            "$RUNNER_TEMP/toml-replay.stdout"; then
+            echo "FAIL: expected reproduced outcome"
+            exit 1
+          fi
+
+          if ! grep -q 'Original exit code: *1' \
+            "$RUNNER_TEMP/toml-replay.stdout"; then
+            echo "FAIL: original exit code mismatch"
+            exit 1
+          fi
+
+          if ! grep -q 'Replay exit code: *1' \
+            "$RUNNER_TEMP/toml-replay.stdout"; then
+            echo "FAIL: replay exit code mismatch"
+            exit 1
+          fi
+
+          echo "PASS: real-world TOML cross-platform offline replay"
