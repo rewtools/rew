@@ -65,6 +65,11 @@ func captureCommandV3WithOptions(
 		return 2
 	}
 
+	if err := checkSensitiveEnvironmentV3(os.Environ()); err != nil {
+		fmt.Fprintf(os.Stderr, "rew: v3 capture preflight: %v\n", err)
+		return 125
+	}
+
 	goExecutable, err := capsule.ResolveGoExecutable()
 	if err != nil {
 		fmt.Fprintf(os.Stderr,

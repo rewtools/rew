@@ -24,6 +24,7 @@ type captureV3Fixture struct {
 
 func makeCaptureV3Fixture(t *testing.T) captureV3Fixture {
 	t.Helper()
+	setupCaptureV3WithoutCredentials(t)
 
 	const modulePath = "example.com/rew/fixture"
 	const moduleVersion = "v1.0.0"

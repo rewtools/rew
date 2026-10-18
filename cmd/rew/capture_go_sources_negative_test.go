@@ -20,6 +20,7 @@ func TestCaptureV3GoSourcesRejectsDuplicateFlag(t *testing.T) {
 }
 
 func TestCaptureV3GoSourcesRejectsMissingSourcesBeforeExecution(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOWORK", "off")
 	t.Setenv("GOFLAGS", "")
@@ -59,6 +60,7 @@ func TestCaptureV3GoSourcesRejectsMissingSourcesBeforeExecution(t *testing.T) {
 }
 
 func TestCaptureV3GoSourcesRejectsDuplicateExplicitInclude(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOWORK", "off")
 	t.Setenv("GOFLAGS", "")
@@ -105,6 +107,7 @@ func TestCaptureV3GoSourcesRejectsDuplicateExplicitInclude(t *testing.T) {
 }
 
 func TestCaptureV3GoSourcesPreflightDoesNotExecuteCommand(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOWORK", "off")
 	t.Setenv("GOFLAGS", "")

@@ -46,6 +46,7 @@ func requireNoCaptureV3Archive(t *testing.T, path string) {
 }
 
 func TestCaptureV3SuccessDoesNotCreateArchive(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOFLAGS", "")
 	t.Setenv("GOWORK", "off")
@@ -83,6 +84,7 @@ func TestCaptureV3SuccessDoesNotCreateArchive(t *testing.T) {
 }
 
 func TestCaptureV3RejectsMissingGoSum(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	workspace := makeCaptureV3TestWorkspace(t)
 	output := filepath.Join(t.TempDir(), "failure.bfc")
 
@@ -101,6 +103,7 @@ func TestCaptureV3RejectsMissingGoSum(t *testing.T) {
 }
 
 func TestCaptureV3RejectsUnsupportedRuntime(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	workspace := t.TempDir()
 	output := filepath.Join(t.TempDir(), "failure.bfc")
 
@@ -119,6 +122,7 @@ func TestCaptureV3RejectsUnsupportedRuntime(t *testing.T) {
 }
 
 func TestCaptureV3RejectsInvalidArguments(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	workspace := t.TempDir()
 	output := filepath.Join(t.TempDir(), "failure.bfc")
 
@@ -148,6 +152,7 @@ func TestCaptureV3RejectsInvalidArguments(t *testing.T) {
 }
 
 func TestCaptureV3UnsupportedGoModDoesNotWriteArchive(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	workspace := makeCaptureV3TestWorkspace(t)
 	output := filepath.Join(t.TempDir(), "failure.bfc")
 
