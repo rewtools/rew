@@ -90,3 +90,56 @@ func TestCLIHelpInvalidArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestCLIHelpCapsuleExtensionMigration(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "capture",
+			args: []string{"capture", "--help"},
+			want: []string{
+				"failure.rew",
+				"failure.bfc",
+				"Existing output files are never overwritten",
+			},
+		},
+		{
+			name: "replay",
+			args: []string{"replay", "--help"},
+			want: []string{
+				"<capsule.rew>",
+				"failure.rew",
+				"legacy .bfc",
+			},
+		},
+		{
+			name: "audit",
+			args: []string{"audit", "--help"},
+			want: []string{
+				"<capsule.rew>",
+				"legacy .bfc",
+				"Zero findings does not mean safe to share",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, stdout, stderr := runHelpTest(tt.args)
+			if code != 0 {
+				t.Fatalf("help exit = %d, want 0", code)
+			}
+			if stderr != "" {
+				t.Fatalf("unexpected stderr: %q", stderr)
+			}
+			for _, expected := range tt.want {
+				if !strings.Contains(stdout, expected) {
+					t.Errorf("help missing %q:\n%s", expected, stdout)
+				}
+			}
+		})
+	}
+}

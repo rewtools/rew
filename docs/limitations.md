@@ -19,7 +19,7 @@ REW is not production-ready. Supported scenarios are intentionally narrow, and s
 | Dependency artifacts | `.zip`, `.mod`, `.info` |
 | Dependency verification | Go module h1 checksums and artifact integrity |
 | Workspace capture | Explicitly included regular files |
-| Capsule format | Experimental schema-v3 `.bfc` |
+| Capsule format | Experimental schema-v3; new filename extension `.rew`, legacy `.bfc` accepted |
 | Replay target | Linux AMD64 |
 | Replay runtime | Version-specific pinned Go Docker image matching the capsule runtime |
 | Container networking | Disabled |
@@ -38,7 +38,7 @@ The schema-v3 implementation enforces:
 - Maximum 64 MiB combined module artifact data.
 - Maximum 48 MiB unpacked ZIP contents per complete Go module.
 - Maximum 256 MiB combined unpacked ZIP contents across selected complete Go modules.
-- Maximum 96 MiB total schema-v3 `.bfc` archive size.
+- Maximum 96 MiB total schema-v3 capsule archive size (both `.rew` and `.bfc`).
 - Maximum 2048 explicitly included workspace files for the current development schema v3 (256 in the published v0.1.0-alpha.3 release).
 - Schema-v3 workspace paths must be representable in USTAR TAR headers without requiring PAX path extensions.
 - Schema v2 retains its 64-file workspace limit.

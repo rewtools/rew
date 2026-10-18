@@ -8,7 +8,7 @@ import (
 	"github.com/rewtools/rew/internal/capsule"
 )
 
-const auditUsage = "Usage: rew audit <capsule.bfc>"
+const auditUsage = "Usage: rew audit <capsule.rew>"
 
 // runAudit verifies a schema-v3 capsule without running its command.
 // It also performs limited sensitive-data checks on verified contents.

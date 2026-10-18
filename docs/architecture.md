@@ -53,7 +53,7 @@ rew capture --v3
         +-- Verify module content and checksums
         |
         v
-    failure.bfc
+    failure.rew
         |
         v
 rew replay --v3 --allow-command
@@ -176,7 +176,7 @@ execute. See [Replay Staging Security Model](security-model.md).
 
 ## Capsule Format
 
-A `.bfc` is an archive containing a manifest, selected workspace content, and dependency artifacts.
+A schema-v3 capsule is an archive containing a manifest, selected workspace content, and dependency artifacts. New captures use `.rew`; existing `.bfc` capsules remain readable. The filename extension does not change the internal schema.
 
 Schema-v3 records information including:
 

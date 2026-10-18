@@ -48,7 +48,7 @@ The primary assets are:
 
 REW crosses several trust boundaries:
 
-1. **Capture host to capsule:** selected files, command metadata, and diagnostic output are serialized into a `.bfc` archive.
+1. **Capture host to capsule:** selected files, command metadata, and diagnostic output are serialized into a capsule archive (`.rew` for new schema-v3 captures; legacy `.bfc` remains supported).
 2. **Capsule to replay process:** archive contents are parsed and
    verified; dependency artifacts are held in a private disk-backed
    store, while workspace bytes remain bounded in memory before TAR
@@ -179,7 +179,7 @@ Capsules may include:
 
 Sensitive data may appear in logs, arguments, or source files even when it was not intentionally selected for disclosure.
 
-Do not upload or share `.bfc` files containing confidential information.
+Do not upload or share `.rew` or `.bfc` capsules containing confidential information.
 
 The development-source audit command provides limited checks for
 verified schema-v3 capsules. It examines sensitive workspace filenames

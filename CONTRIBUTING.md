@@ -178,7 +178,7 @@ Changes that expand supported commands, module configurations, platforms, or exe
 
 Do not silently broaden compatibility assumptions.
 
-The `.bfc` format is experimental, but schema changes still require discussion and review.
+The capsule schema is experimental, but schema changes still require discussion and review. The `.rew` and legacy `.bfc` filename extensions do not determine the internal schema version.
 
 ## Documentation
 
