@@ -13,6 +13,7 @@ import (
 )
 
 func TestCaptureReplayV3ZeroDependenciesEndToEnd(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	if os.Getenv("REW_DOCKER_TEST") != "1" {
 		t.Skip("Docker integration test disabled")
 	}

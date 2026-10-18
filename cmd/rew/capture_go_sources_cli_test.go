@@ -10,6 +10,7 @@ import (
 )
 
 func TestCaptureV3GoSourcesCLI(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOWORK", "off")
 	t.Setenv("GOFLAGS", "")

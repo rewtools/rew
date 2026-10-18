@@ -25,6 +25,33 @@ recorded checksums and manifest requirements.
 This document describes the path from a verified `.bfc` capsule to
 execution in a restricted Docker container.
 
+## Sensitive Environment Preflight
+
+Schema-v3 capture checks the process environment before resolving the
+Go executable, reading workspace files, or executing the captured build.
+
+Capture refuses to proceed when any of these variables has a non-empty
+value (variable names are matched case-insensitively):
+
+- `GITHUB_TOKEN`
+- `GH_TOKEN`
+- `GITLAB_TOKEN`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_SESSION_TOKEN`
+
+The command exits with status `125` and identifies the variable name
+without printing its value. Empty values do not trigger rejection.
+
+This is a narrow, conservative safeguard, **not comprehensive secret
+detection or redaction**. Other credential names, source files,
+embedded resources, command metadata, and diagnostic output may still
+contain sensitive information. A successful preflight does not establish
+that a capsule is safe to share.
+
+Run capture in an environment without these credentials. Do not disable
+credential handling or remove variables required by unrelated CI steps
+globally; isolate only the REW capture process.
+
 ## Snapshot Lifecycle
 
 The current schema-v3 replay implementation:

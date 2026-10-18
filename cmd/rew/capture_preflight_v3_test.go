@@ -29,6 +29,7 @@ func setupPortableCaptureV3Test(t *testing.T) {
 }
 
 func TestCaptureV3PreflightRejectsCGO(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	setupPortableCaptureV3Test(t)
 
 	workspace := t.TempDir()
@@ -53,6 +54,7 @@ func TestCaptureV3PreflightRejectsCGO(t *testing.T) {
 }
 
 func TestCaptureV3PreflightRejectsExistingOutput(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	setupPortableCaptureV3Test(t)
 
 	workspace := t.TempDir()

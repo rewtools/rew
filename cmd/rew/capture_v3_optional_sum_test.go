@@ -9,6 +9,7 @@ import (
 )
 
 func TestCaptureV3WithoutGoSum(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOFLAGS", "")
 	t.Setenv("GOWORK", "off")
@@ -74,6 +75,7 @@ func TestCaptureV3WithoutGoSum(t *testing.T) {
 }
 
 func TestCaptureV3RejectsExistingUnincludedGoSum(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOFLAGS", "")
 	t.Setenv("GOWORK", "off")
@@ -116,6 +118,7 @@ func TestCaptureV3RejectsExistingUnincludedGoSum(t *testing.T) {
 }
 
 func TestCaptureV3RejectsDependencyWithoutGoSum(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	t.Setenv("CGO_ENABLED", "0")
 	t.Setenv("GOFLAGS", "")
 	t.Setenv("GOWORK", "off")
@@ -158,6 +161,7 @@ func TestCaptureV3RejectsDependencyWithoutGoSum(t *testing.T) {
 }
 
 func TestCaptureV3RejectsCachedDependencyWithoutGoSum(t *testing.T) {
+	setupCaptureV3WithoutCredentials(t)
 	fixture := makeCaptureV3Fixture(t)
 
 	goSumPath := filepath.Join(fixture.workspace, "go.sum")
