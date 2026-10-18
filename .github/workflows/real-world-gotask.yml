@@ -1,0 +1,312 @@
+name: Real-World Go-Task Compatibility
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gotask-capture:
+    name: Go-Task Capture and Audit on macOS ARM64
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout REW
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build REW
+        run: GOTOOLCHAIN=local go build -o rew ./cmd/rew
+
+      - name: Prepare pinned Go-Task fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = arm64
+          test "$(go version)" = "go version go1.26.6 darwin/arm64"
+
+          expected="32fa3a01561b16aee9c87ecf0b49be5b733bb3d1"
+
+          git clone \
+            https://github.com/go-task/task.git \
+            "$RUNNER_TEMP/gotask-upstream"
+
+          git -C "$RUNNER_TEMP/gotask-upstream" \
+            checkout --detach "$expected"
+
+          actual="$(git -C "$RUNNER_TEMP/gotask-upstream" rev-parse HEAD)"
+          test "$actual" = "$expected"
+
+          mkdir -p "$RUNNER_TEMP/gotask-fixture"
+
+          git -C "$RUNNER_TEMP/gotask-upstream" archive HEAD \
+            | tar -x -C "$RUNNER_TEMP/gotask-fixture"
+
+          cat > "$RUNNER_TEMP/gotask-fixture/rew_regression_failure.go" <<'EOF'
+          package task
+
+          var rewRegressionFailure = rewIntentionallyUndefined
+          EOF
+
+          test -f "$RUNNER_TEMP/gotask-fixture/go.mod"
+          test -f "$RUNNER_TEMP/gotask-fixture/go.sum"
+          test -f "$RUNNER_TEMP/gotask-fixture/rew_regression_failure.go"
+
+          test -z "$(git -C "$RUNNER_TEMP/gotask-upstream" status --porcelain)"
+
+      - name: Prepare Go-Task dependencies
+        shell: bash
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+          GOWORK: "off"
+          GOTOOLCHAIN: local
+        run: |
+          set -euo pipefail
+
+          cd "$RUNNER_TEMP/gotask-fixture"
+
+          go mod download
+          go list -deps ./... > "$RUNNER_TEMP/gotask-packages.txt"
+
+          test -s "$RUNNER_TEMP/gotask-packages.txt"
+
+          echo "=== PREPARE FULL MODULE GRAPH METADATA ==="
+          GOFLAGS=-mod=readonly go mod graph \
+            > "$RUNNER_TEMP/gotask-module-graph.txt"
+
+          test -s "$RUNNER_TEMP/gotask-module-graph.txt"
+
+          echo "=== PRIME FULL MODULE METADATA ==="
+          GOFLAGS=-mod=readonly go list -m -json all \
+            > "$RUNNER_TEMP/gotask-online-modules.json"
+
+          test -s "$RUNNER_TEMP/gotask-online-modules.json"
+
+          echo "=== VERIFY OFFLINE MODULE GRAPH ==="
+          GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+            go list -m -json all \
+            > "$RUNNER_TEMP/gotask-offline-modules.json"
+
+          test -s "$RUNNER_TEMP/gotask-offline-modules.json"
+
+          GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+            go mod graph \
+            > "$RUNNER_TEMP/gotask-offline-module-graph.txt"
+
+          test -s "$RUNNER_TEMP/gotask-offline-module-graph.txt"
+
+          echo "=== OFFLINE PACKAGE RESOLUTION ==="
+          GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+            go list -deps ./... \
+            > "$RUNNER_TEMP/gotask-offline-packages.txt"
+
+          test -s "$RUNNER_TEMP/gotask-offline-packages.txt"
+
+      - name: Capture and audit Go-Task failure
+        shell: bash
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+          GOFLAGS: ""
+          GOWORK: "off"
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+
+          cd "$RUNNER_TEMP/gotask-fixture"
+
+          set +e
+          "$GITHUB_WORKSPACE/rew" capture \
+            --v3 \
+            --include-go-sources \
+            --include-go-embed \
+            -- go build ./... \
+            > "$RUNNER_TEMP/gotask-capture.stdout" \
+            2> "$RUNNER_TEMP/gotask-capture.stderr"
+          capture_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/gotask-capture.stdout"
+          cat "$RUNNER_TEMP/gotask-capture.stderr"
+
+          test "$capture_exit" -eq 1
+          grep -q 'undefined: rewIntentionallyUndefined' \
+            "$RUNNER_TEMP/gotask-capture.stderr"
+          test -s failure.bfc
+
+          echo "=== CAPSULE AUDIT ==="
+          "$GITHUB_WORKSPACE/rew" audit failure.bfc \
+            > "$RUNNER_TEMP/gotask-audit.stdout"
+
+          cat "$RUNNER_TEMP/gotask-audit.stdout"
+
+          grep -q 'Capsule integrity: verified' \
+            "$RUNNER_TEMP/gotask-audit.stdout"
+
+          grep -q 'Schema version: 3' \
+            "$RUNNER_TEMP/gotask-audit.stdout"
+
+          grep -q 'Go modules: 48' \
+            "$RUNNER_TEMP/gotask-audit.stdout"
+
+          grep -q 'Sensitive data findings: 0' \
+            "$RUNNER_TEMP/gotask-audit.stdout"
+
+          echo "=== VERIFY CAPSULE CONTENTS ==="
+          python3 - failure.bfc <<'PY'
+          import json
+          import sys
+          import tarfile
+
+          with tarfile.open(sys.argv[1], "r:") as archive:
+              member = archive.extractfile("manifest.json")
+              if member is None:
+                  raise SystemExit("missing manifest.json")
+              manifest = json.load(member)
+
+          assert manifest["schema_version"] == 3
+          assert manifest["runtime"] == {
+              "kind": "go",
+              "version": "1.26.6",
+          }
+          assert manifest["execution"]["argv"] == [
+              "go", "build", "./...",
+          ]
+          assert manifest["execution"]["exit_code"] == 1
+          assert "undefined: rewIntentionallyUndefined" in (
+              manifest["execution"]["stderr"]
+          )
+
+          print("PASS: Go-Task schema-v3 manifest verified")
+          PY
+
+          cp failure.bfc "$RUNNER_TEMP/rew-gotask-v3.bfc"
+          (
+            cd "$RUNNER_TEMP"
+            shasum -a 256 rew-gotask-v3.bfc > rew-gotask-v3.sha256
+            shasum -a 256 -c rew-gotask-v3.sha256
+          )
+
+          echo "PASS: Go-Task capture and audit"
+
+      - name: Upload verified Go-Task capsule
+        uses: actions/upload-artifact@v6
+        with:
+          name: real-world-gotask-v3-capsule
+          path: |
+            ${{ runner.temp }}/rew-gotask-v3.bfc
+            ${{ runner.temp }}/rew-gotask-v3.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+  gotask-replay:
+    name: Go-Task Offline Replay on Linux AMD64
+    runs-on: ubuntu-24.04
+    needs: gotask-capture
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout REW
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build REW
+        run: GOTOOLCHAIN=local go build -o rew ./cmd/rew
+
+      - name: Download Go-Task capsule
+        uses: actions/download-artifact@v6
+        with:
+          name: real-world-gotask-v3-capsule
+          path: ${{ runner.temp }}/gotask-capsule
+
+      - name: Verify Linux Docker environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(uname -s)" = Linux
+          test "$(uname -m)" = x86_64
+
+          docker version
+          docker info
+
+      - name: Verify and replay Go-Task capsule offline
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          capsule="$RUNNER_TEMP/gotask-capsule/rew-gotask-v3.bfc"
+          test -s "$capsule"
+
+          echo "=== VERIFY TRANSFERRED CAPSULE SHA-256 ==="
+          (
+            cd "$RUNNER_TEMP/gotask-capsule"
+            test -s rew-gotask-v3.sha256
+            sha256sum -c rew-gotask-v3.sha256
+          )
+
+          echo "=== CAPSULE AUDIT ==="
+          ./rew audit "$capsule" \
+            > "$RUNNER_TEMP/gotask-linux-audit.stdout"
+
+          cat "$RUNNER_TEMP/gotask-linux-audit.stdout"
+
+          grep -q 'Capsule integrity: verified' \
+            "$RUNNER_TEMP/gotask-linux-audit.stdout"
+
+          grep -q 'Go modules: 48' \
+            "$RUNNER_TEMP/gotask-linux-audit.stdout"
+
+          echo "=== OFFLINE DOCKER REPLAY ==="
+          set +e
+          ./rew replay \
+            --v3 \
+            --allow-command \
+            --memory 2g \
+            "$capsule" \
+            > "$RUNNER_TEMP/gotask-replay.stdout" \
+            2> "$RUNNER_TEMP/gotask-replay.stderr"
+          replay_exit=$?
+          set -e
+
+          cat "$RUNNER_TEMP/gotask-replay.stdout"
+          cat "$RUNNER_TEMP/gotask-replay.stderr"
+
+          test "$replay_exit" -eq 0
+
+          grep -Eq 'Outcome: *reproduced' \
+            "$RUNNER_TEMP/gotask-replay.stdout"
+
+          grep -Eq 'Original exit code: *1' \
+            "$RUNNER_TEMP/gotask-replay.stdout"
+
+          grep -Eq 'Replay exit code: *1' \
+            "$RUNNER_TEMP/gotask-replay.stdout"
+
+          echo "=== VERIFY CAPSULE UNCHANGED ==="
+          (
+            cd "$RUNNER_TEMP/gotask-capsule"
+            sha256sum -c rew-gotask-v3.sha256
+          )
+
+          echo "PASS: Go-Task cross-platform offline replay"
