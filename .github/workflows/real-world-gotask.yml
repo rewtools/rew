@@ -88,6 +88,12 @@ jobs:
 
           test -s "$RUNNER_TEMP/gotask-module-graph.txt"
 
+          echo "=== PRIME FULL MODULE METADATA ==="
+          GOFLAGS=-mod=readonly go list -m -json all \
+            > "$RUNNER_TEMP/gotask-online-modules.json"
+
+          test -s "$RUNNER_TEMP/gotask-online-modules.json"
+
           echo "=== VERIFY OFFLINE MODULE GRAPH ==="
           GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
             go list -m -json all \
