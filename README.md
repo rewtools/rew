@@ -97,14 +97,14 @@ Replay containers run without network access. The Docker host may still need net
 
 ## Install
 
-The planned next REW prerelease is
+The current REW prerelease is
 [v0.1.0-alpha.6](https://github.com/rewtools/rew/releases/tag/v0.1.0-alpha.6).
 
-The planned alpha.6 release supports schema-v3 capture and replay with Go 1.25.14 or Go 1.26.6 (exact patch versions).
+The alpha.6 release supports schema-v3 capture and replay with Go 1.25.14 or Go 1.26.6 (exact patch versions).
 
-The planned release targets macOS ARM64 and Linux AMD64.
+Published binaries target macOS ARM64 and Linux AMD64.
 
-After v0.1.0-alpha.6 is published, download and verify its binary:
+Download and verify the v0.1.0-alpha.6 binary:
 
 ```sh
 VERSION=v0.1.0-alpha.6
@@ -495,7 +495,7 @@ Integrity verification is not the same as authenticating who created a capsule.
 
 ## Capsule Share Audit
 
-The planned v0.1.0-alpha.6 release includes `rew audit failure.rew`.
+REW v0.1.0-alpha.6 includes `rew audit failure.rew`.
 The historical v0.1.0-alpha.5 binaries do not include this command.
 
 It verifies schema-v3 capsule integrity and performs limited checks for

@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the schema-v3 implementation planned for v0.1.0-alpha.6.
+This document describes the schema-v3 implementation released in v0.1.0-alpha.6.
 Earlier alpha releases may have different limits and capabilities.
 
 REW is not production-ready. Supported scenarios are intentionally narrow, and successful reproduction is not guaranteed outside the tested configurations.
