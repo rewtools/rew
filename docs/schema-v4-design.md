@@ -64,8 +64,10 @@ The manifest must carry canonical, relative paths.
 
 Proposed fields, subject to implementation review:
 
-- `working_dir`: canonical path to the main module directory,
-  relative to the snapshot root.
+- `execution.working_dir`: reuse the existing execution field,
+  with schema-v4-specific validation requiring a canonical path
+  to the main module relative to the snapshot root. No new
+  top-level `working_dir` field is introduced.
 - `local_modules`: bounded list of captured local module
   replacements with original module identity, replacement
   directive identity, canonical snapshot path, and file metadata.
