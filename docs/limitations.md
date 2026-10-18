@@ -2,9 +2,8 @@
 
 ## Status
 
-This document describes the current schema-v3 development implementation.
-The published v0.1.0-alpha.3 release has lower workspace capacity;
-unreleased changes described here are not available in that binary.
+This document describes the schema-v3 implementation planned for v0.1.0-alpha.6.
+Earlier alpha releases may have different limits and capabilities.
 
 REW is not production-ready. Supported scenarios are intentionally narrow, and successful reproduction is not guaranteed outside the tested configurations.
 
@@ -39,7 +38,7 @@ The schema-v3 implementation enforces:
 - Maximum 48 MiB unpacked ZIP contents per complete Go module.
 - Maximum 256 MiB combined unpacked ZIP contents across selected complete Go modules.
 - Maximum 96 MiB total schema-v3 capsule archive size (both `.rew` and `.bfc`).
-- Maximum 2048 explicitly included workspace files for the current development schema v3 (256 in the published v0.1.0-alpha.3 release).
+- Maximum 2048 explicitly included workspace files for schema v3.
 - Schema-v3 workspace paths must be representable in USTAR TAR headers without requiring PAX path extensions.
 - Schema v2 retains its 64-file workspace limit.
 - Maximum 10 MiB per workspace file.
@@ -145,7 +144,7 @@ Dependency content is verified, but verification does not establish whether the 
 
 The user selects files through `--include`.
 
-Files referenced by Go `//go:embed` directives must also be included explicitly. REW does not currently discover and include those resources automatically.
+Files referenced by Go `//go:embed` directives must be captured. For supported Go projects, `--include-go-embed` can discover and include embedded resources automatically; otherwise use explicit `--include` paths. Automatic discovery does not guarantee inclusion of every non-Go build input.
 
 The resulting capsule does not automatically contain the entire repository or working environment.
 
@@ -158,7 +157,7 @@ Consequently:
 - Processes and background services are not snapshotted.
 - The original operating system is not reproduced.
 
-For a supported v3 capture, `go.mod` and `go.sum` must be included.
+For supported schema-v3 captures, include `go.mod` and any existing `go.sum`. Dependency-free Go projects without `go.sum` are supported through an embedded virtual empty file.
 
 ## Go Toolchain Selection During Capture
 

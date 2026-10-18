@@ -71,7 +71,7 @@ REW also retains older experimental capture/replay modes.
 
 The schema-v3 format is experimental and may change.
 
-**Capsule filename compatibility:** Development builds use `failure.rew` for new schema-v3 captures. Existing `.bfc` capsules remain readable by schema-v3 audit and replay. Legacy capture modes continue to create `failure.bfc`. The published v0.1.0-alpha.5 binaries predate this change.
+**Capsule filename compatibility:** Schema-v3 capture creates `failure.rew`. Existing `.bfc` capsules remain readable by schema-v3 audit and replay. Legacy capture modes retain `failure.bfc`. The historical v0.1.0-alpha.5 binaries also create `.bfc` capsules.
 
 Projects with no external Go dependencies are supported. For these
 projects, the capsule contains no dependency artifacts.
@@ -97,17 +97,17 @@ Replay containers run without network access. The Docker host may still need net
 
 ## Install
 
-The first public REW prerelease is
-[v0.1.0-alpha.5](https://github.com/rewtools/rew/releases/tag/v0.1.0-alpha.5).
+The planned next REW prerelease is
+[v0.1.0-alpha.6](https://github.com/rewtools/rew/releases/tag/v0.1.0-alpha.6).
 
-Go 1.25.14 support is currently available only in the development source; the published alpha.5 binaries support Go 1.26.6.
+The planned alpha.6 release supports schema-v3 capture and replay with Go 1.25.14 or Go 1.26.6 (exact patch versions).
 
-Prebuilt binaries are available for macOS ARM64 and Linux AMD64.
+The planned release targets macOS ARM64 and Linux AMD64.
 
-Download and verify the published binary:
+After v0.1.0-alpha.6 is published, download and verify its binary:
 
 ```sh
-VERSION=v0.1.0-alpha.5
+VERSION=v0.1.0-alpha.6
 BASE="https://github.com/rewtools/rew/releases/download/$VERSION"
 
 case "$(uname -s)/$(uname -m)" in
@@ -493,10 +493,10 @@ to Docker-managed volumes, without host bind mounts for replay inputs.
 
 Integrity verification is not the same as authenticating who created a capsule.
 
-## Capsule Share Audit (Development Source)
+## Capsule Share Audit
 
-The development-source CLI includes `rew audit failure.rew`.
-This command is not included in the published v0.1.0-alpha.5 binaries.
+The planned v0.1.0-alpha.6 release includes `rew audit failure.rew`.
+The historical v0.1.0-alpha.5 binaries do not include this command.
 
 It verifies schema-v3 capsule integrity and performs limited checks for
 sensitive workspace filenames and known credential assignments in command
