@@ -52,6 +52,37 @@ Run capture in an environment without these credentials. Do not disable
 credential handling or remove variables required by unrelated CI steps
 globally; isolate only the REW capture process.
 
+## Sensitive Workspace Path Preflight
+
+Schema-v3 capture also checks selected workspace filenames against a
+narrow, case-insensitive sensitive-path policy.
+
+Explicit `--include` paths are checked before resolving the Go executable.
+After Go source and embed discovery, the final selected path list is
+checked before reading workspace files or executing the captured build.
+
+The current policy rejects:
+
+- `.env` and `.env.*`, except `.env.example` and `.env.sample`.
+- `.npmrc` and `credentials.json`.
+- Common SSH private-key filenames: `id_rsa`, `id_ed25519`,
+  `id_ecdsa`, and `id_dsa`.
+- Filenames ending in `.key`, except `public.key`.
+- A `credentials` file inside a `.aws` directory.
+
+The policy applies to nested relative paths and returns exit status
+`125` when a match is found. Diagnostics identify the selected path
+but do not read or print its file contents.
+
+This check is not comprehensive secret detection, content scanning,
+or redaction. Legitimate files may match the denylist, and sensitive
+content may exist in allowed filenames, source files, dependencies,
+command arguments, stdout, or stderr.
+
+Go discovery subprocesses run before the final path check and are not
+sandboxed by this preflight. A successful check does not mean a capsule
+is safe to publish or share.
+
 ## Snapshot Lifecycle
 
 The current schema-v3 replay implementation:

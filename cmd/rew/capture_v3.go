@@ -70,6 +70,11 @@ func captureCommandV3WithOptions(
 		return 125
 	}
 
+	if err := checkSensitiveWorkspacePathsV3(includes); err != nil {
+		fmt.Fprintf(os.Stderr, "rew: v3 capture preflight: %v\n", err)
+		return 125
+	}
+
 	goExecutable, err := capsule.ResolveGoExecutable()
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -265,6 +270,11 @@ func captureCommandV3WithOptions(
 				"rew: workspace file limit leaves no room for virtual go.sum")
 			return 125
 		}
+	}
+
+	if err := checkSensitiveWorkspacePathsV3(includes); err != nil {
+		fmt.Fprintf(os.Stderr, "rew: v3 capture preflight: %v\n", err)
+		return 125
 	}
 
 	beforeFiles, err := capsule.ReadWorkspaceFilesV3(
