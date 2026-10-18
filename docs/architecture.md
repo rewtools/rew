@@ -102,11 +102,11 @@ If the build succeeds, no failure capsule is written.
 
 If it fails, REW requires complete, nonempty stderr and attempts to package the recorded failure.
 
-The user must explicitly select workspace files using `--include`.
+Workspace files can be selected explicitly using `--include` or automatically discovered using `--include-go-sources` and `--include-go-embed` where applicable.
 
-Schema v3 accepts at most 256 included regular workspace files, while schema v2 retains its existing 64-file limit. The combined workspace data limit remains 14 MiB, with a maximum of 10 MiB per file. These limits are enforced during capture, manifest validation, verified reading, and staging verification.
+Schema v3 accepts at most 2048 workspace files, including automatically discovered Go sources, embedded resources, and go.mod/go.sum (including a virtual empty go.sum when applicable). Schema v2 retains its existing 64-file limit. The combined workspace data limit remains 14 MiB, with a maximum of 10 MiB per file. These limits are enforced during capture, manifest validation, verified reading, and staging verification.
 
-For the current supported dependency scenario, both `go.mod` and `go.sum` must be included.
+Schema-v3 capture requires `go.mod`. Projects with external Go dependencies require an included `go.sum`; dependency-free projects without `go.sum` can use a virtual empty `go.sum` stored in the capsule.
 
 ## Go Dependency Capture
 

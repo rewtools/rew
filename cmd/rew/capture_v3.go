@@ -147,7 +147,7 @@ func captureCommandV3WithOptions(
 				return nil
 			}
 			if len(merged) >= capsule.MaxWorkspaceV3Files {
-				return fmt.Errorf("workspace file limit exceeded")
+				return fmt.Errorf("schema-v3 workspace file limit exceeded (maximum %d files)", capsule.MaxWorkspaceV3Files)
 			}
 			seen[name] = struct{}{}
 			merged = append(merged, name)
@@ -239,8 +239,8 @@ func captureCommandV3WithOptions(
 				continue
 			}
 			if len(merged) >= capsule.MaxWorkspaceV3Files {
-				fmt.Fprintln(os.Stderr,
-					"rew: workspace file limit exceeded after Go embed discovery")
+				fmt.Fprintf(os.Stderr,
+					"rew: schema-v3 workspace file limit exceeded after Go embed discovery (maximum %d files)\n", capsule.MaxWorkspaceV3Files)
 				return 125
 			}
 			seen[name] = struct{}{}
@@ -266,8 +266,8 @@ func captureCommandV3WithOptions(
 			}
 		}
 		if !hasIncludedGoSum {
-			fmt.Fprintln(os.Stderr,
-				"rew: workspace file limit leaves no room for virtual go.sum")
+			fmt.Fprintf(os.Stderr,
+				"rew: schema-v3 workspace file limit leaves no room for virtual go.sum (maximum %d files)\n", capsule.MaxWorkspaceV3Files)
 			return 125
 		}
 	}
