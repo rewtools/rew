@@ -178,6 +178,7 @@ After building REW, you can inspect its available commands:
     ./rew --help
     ./rew capture --help
     ./rew replay --help
+    ./rew audit --help
     ./rew --version
 
 The `capture` and `replay` help commands describe the supported schema-v3
@@ -489,6 +490,31 @@ snapshots are constructed from verified capsule contents and uploaded
 to Docker-managed volumes, without host bind mounts for replay inputs.
 
 Integrity verification is not the same as authenticating who created a capsule.
+
+## Capsule Share Audit (Development Source)
+
+The development-source CLI includes `rew audit failure.bfc`.
+This command is not included in the published v0.1.0-alpha.5 binaries.
+
+It verifies schema-v3 capsule integrity and performs limited checks for
+sensitive workspace filenames and known credential assignments in command
+arguments, stdout, stderr, and verified workspace file contents.
+
+```sh
+rew audit failure.bfc
+```
+
+Exit codes: 0 = no findings from supported checks; 2 = invalid arguments;
+3 = potential sensitive data detected; 125 = verification or cleanup error.
+
+Audit does not execute the captured command, invoke Go or start Docker.
+Dependency ZIP contents are not scanned. It does not detect arbitrary
+secrets, redact capsules, or authenticate their publishers.
+
+Findings contain generic categories, not matched credential values.
+
+**A successful audit does not prove that a capsule is safe to share.**
+Review confidential material before publishing or transferring capsules.
 
 ## Security
 

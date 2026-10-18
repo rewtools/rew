@@ -13,6 +13,7 @@ Usage:
 Commands:
   capture    Capture a failed Go build
   replay     Verify and replay a capsule
+  audit      Verify and check a capsule for selected sensitive data
   cleanup    Inspect Docker snapshot volumes (requires --dry-run)
   version    Print the CLI version
   splash     Show the REW terminal banner
@@ -86,4 +87,25 @@ WARNING:
   Replay executes the command recorded in the capsule.
   Only replay capsules from sources you trust.
   Docker isolation is not a complete security boundary.`)
+}
+
+func printAuditHelp() {
+	fmt.Println(`Verify a schema-v3 capsule and perform limited sensitive-data checks.
+
+Usage:
+  rew audit <capsule.bfc>
+
+Checks:
+  Capsule integrity, sensitive workspace filenames, and known credential
+  assignments in argv, stdout, stderr, and workspace file contents.
+
+Exit codes:
+  0    Verified; no findings from supported checks
+  2    Invalid arguments
+  3    Potential sensitive data detected
+  125  Verification or cleanup failure
+
+Does not execute the captured command or invoke Docker.
+Does not scan dependency ZIP contents.
+Zero findings does not mean safe to share.`)
 }

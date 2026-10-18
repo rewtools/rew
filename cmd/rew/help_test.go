@@ -49,6 +49,8 @@ func TestCLIHelp(t *testing.T) {
 		{"capture short", []string{"capture", "-h"}, "go build ./..."},
 		{"replay", []string{"replay", "--help"}, "--memory"},
 		{"replay short", []string{"replay", "-h"}, "--memory"},
+		{"audit", []string{"audit", "--help"}, "safe to share"},
+		{"audit short", []string{"audit", "-h"}, "safe to share"},
 		{"version alias", []string{"--version"}, "rew dev"},
 	}
 
@@ -76,6 +78,7 @@ func TestCLIHelpInvalidArguments(t *testing.T) {
 		{"help", "extra"},
 		{"capture", "--help", "extra"},
 		{"replay", "--help", "extra"},
+		{"audit", "--help", "extra"},
 		{"unknown-command"},
 	}
 

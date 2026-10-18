@@ -153,6 +153,14 @@ func run(args []string) int {
 			"failure.bfc",
 		)
 
+	case "audit":
+		if len(args) == 2 &&
+			(args[1] == "--help" || args[1] == "-h") {
+			printAuditHelp()
+			return 0
+		}
+		return runAudit(args[1:])
+
 	case "cleanup":
 		return runCleanup(args[1:])
 
