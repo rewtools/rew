@@ -5,6 +5,7 @@ import (
 	"github.com/rewtools/rew/internal/capsule"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -79,16 +80,28 @@ func main() {
 
 			output := filepath.Join(root, "failure.bfc")
 
-			code := captureCommandV3WithEmbed(
-				[]string{"go", "build", "./..."},
-				root,
-				includes,
-				output,
-				true,
-			)
+			code, stderr := captureUsageStderr(t, func() int {
+				return captureCommandV3WithEmbed(
+					[]string{"go", "build", "./..."},
+					root,
+					includes,
+					output,
+					true,
+				)
+			})
 
 			if code != tc.wantExit {
-				t.Fatalf("capture exit = %d, want %d", code, tc.wantExit)
+				t.Fatalf("capture exit = %d, want %d; stderr=%q", code, tc.wantExit, stderr)
+			}
+
+			if tc.wantExit == 125 {
+				want := fmt.Sprintf("maximum %d files", capsule.MaxWorkspaceV3Files)
+				if !strings.Contains(stderr, want) {
+					t.Fatalf("missing workspace limit %q: %q", want, stderr)
+				}
+				if strings.Contains(stderr, "%d") {
+					t.Fatalf("unexpanded format placeholder: %q", stderr)
+				}
 			}
 
 			info, err := os.Stat(output)
