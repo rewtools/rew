@@ -181,6 +181,19 @@ Sensitive data may appear in logs, arguments, or source files even when it was n
 
 Do not upload or share `.bfc` files containing confidential information.
 
+The development-source audit command provides limited checks for
+verified schema-v3 capsules. It examines sensitive workspace filenames
+and known credential assignments in recorded argv, stdout, stderr,
+and verified workspace file contents. Findings contain generic categories.
+
+Exit codes: 0 (no findings), 2 (invalid arguments), 3 (potential sensitive
+data), and 125 (verification or cleanup failure).
+
+It does not execute the recorded build, require Docker, or scan dependency
+ZIP contents. Other sensitive information may remain undetected.
+Zero findings does not establish that sharing is safe.
+The published alpha.5 binaries do not include this command.
+
 REW does not currently promise comprehensive secret detection or redaction.
 
 ## Safe Usage Guidelines

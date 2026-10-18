@@ -83,6 +83,28 @@ Go discovery subprocesses run before the final path check and are not
 sandboxed by this preflight. A successful check does not mean a capsule
 is safe to publish or share.
 
+## Capsule Share Audit
+
+The development-source audit command verifies schema-v3 capsules
+without executing the recorded command or invoking Docker.
+
+It uses the verified capsule reader and scans selected workspace
+filenames, recorded argv, stdout, stderr, and verified workspace
+file bytes for a limited set of credential patterns.
+
+Findings identify generic categories without exposing matched values.
+Temporary dependency artifact storage is closed after scanning.
+
+Exit codes: 0 (no findings from supported checks), 2 (invalid arguments),
+3 (potential sensitive data), and 125 (verification or cleanup failure).
+
+This is heuristic detection, not comprehensive secret scanning or
+redaction. Dependency ZIP contents are not scanned. SHA-256 verification
+does not authenticate the capsule publisher.
+
+An exit code of 0 does not mean the capsule is safe to share.
+The command is not available in published alpha.5 binaries.
+
 ## Snapshot Lifecycle
 
 The current schema-v3 replay implementation:
