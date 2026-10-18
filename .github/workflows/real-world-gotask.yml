@@ -82,9 +82,29 @@ jobs:
 
           test -s "$RUNNER_TEMP/gotask-packages.txt"
 
+          echo "=== PREPARE FULL MODULE GRAPH METADATA ==="
+          GOFLAGS=-mod=readonly go mod graph \
+            > "$RUNNER_TEMP/gotask-module-graph.txt"
+
+          test -s "$RUNNER_TEMP/gotask-module-graph.txt"
+
+          echo "=== VERIFY OFFLINE MODULE GRAPH ==="
+          GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+            go list -m -json all \
+            > "$RUNNER_TEMP/gotask-offline-modules.json"
+
+          test -s "$RUNNER_TEMP/gotask-offline-modules.json"
+
+          GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+            go mod graph \
+            > "$RUNNER_TEMP/gotask-offline-module-graph.txt"
+
+          test -s "$RUNNER_TEMP/gotask-offline-module-graph.txt"
+
           echo "=== OFFLINE PACKAGE RESOLUTION ==="
-          GOPROXY=off GOSUMDB=off \
-            go list -deps ./... > "$RUNNER_TEMP/gotask-offline-packages.txt"
+          GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+            go list -deps ./... \
+            > "$RUNNER_TEMP/gotask-offline-packages.txt"
 
           test -s "$RUNNER_TEMP/gotask-offline-packages.txt"
 
