@@ -23,7 +23,7 @@ Run 'rew <command> --help' for command-specific help.`)
 }
 
 func printCaptureHelp() {
-	fmt.Println(`Capture a failed Go build into a portable .bfc capsule.
+	fmt.Println(`Capture a failed Go build into a portable .rew capsule.
 
 Usage:
   rew capture --v3 --include-go-sources [--include-go-embed] -- go build ./...
@@ -57,11 +57,12 @@ Examples:
 
 WARNING:
   Captured source files and manually included files are stored in the
-  capsule. Review sensitive content before sharing the .bfc file.
+  capsule. Review sensitive content before sharing the .rew file.
 
-The resulting capsule is saved as failure.bfc.
+The resulting schema-v3 capsule is saved as failure.rew.
 Existing output files are never overwritten.
-Move or rename failure.bfc before another capture.
+Legacy capture modes continue to save failure.bfc.
+Move or rename failure.rew before another schema-v3 capture.
 Capture supports only the exact command go build ./... in schema v3.`)
 }
 
@@ -69,7 +70,7 @@ func printReplayHelp() {
 	fmt.Println(`Verify and replay a captured failure using Docker.
 
 Usage:
-  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] <capsule.bfc>
+  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] <capsule.rew>
 
 Requirements:
   Docker Engine with Linux AMD64 container execution
@@ -80,20 +81,21 @@ Memory:
   Allowed: 256m, 512m, 1g, 2g
 
 Examples:
-  rew replay --v3 --allow-command failure.bfc
-  rew replay --v3 --allow-command --memory 1g failure.bfc
+  rew replay --v3 --allow-command failure.rew
+  rew replay --v3 --allow-command --memory 1g failure.rew
 
 WARNING:
   Replay executes the command recorded in the capsule.
   Only replay capsules from sources you trust.
-  Docker isolation is not a complete security boundary.`)
+  Docker isolation is not a complete security boundary.
+Both .rew and legacy .bfc schema-v3 capsules are accepted.`)
 }
 
 func printAuditHelp() {
 	fmt.Println(`Verify a schema-v3 capsule and perform limited sensitive-data checks.
 
 Usage:
-  rew audit <capsule.bfc>
+  rew audit <capsule.rew>
 
 Checks:
   Capsule integrity, sensitive workspace filenames, and known credential
@@ -107,5 +109,6 @@ Exit codes:
 
 Does not execute the captured command or invoke Docker.
 Does not scan dependency ZIP contents.
-Zero findings does not mean safe to share.`)
+Zero findings does not mean safe to share.
+Both .rew and legacy .bfc schema-v3 capsules are accepted.`)
 }

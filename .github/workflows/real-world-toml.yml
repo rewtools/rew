@@ -90,9 +90,9 @@ jobs:
           cat "$RUNNER_TEMP/toml-capture.stderr"
 
           test "$capture_exit" -eq 1
-          test -s failure.bfc
+          test -s failure.rew
 
-          python3 - failure.bfc <<'PY'
+          python3 - failure.rew <<'PY'
           import json
           import sys
           import tarfile
@@ -141,13 +141,13 @@ jobs:
           print("PASS: real-world TOML manifest verified")
           PY
 
-          cp failure.bfc "$RUNNER_TEMP/rew-toml-v3.bfc"
+          cp failure.rew "$RUNNER_TEMP/rew-toml-v3.rew"
 
       - name: Upload verified TOML capsule
         uses: actions/upload-artifact@v6
         with:
           name: real-world-toml-v3-capsule
-          path: ${{ runner.temp }}/rew-toml-v3.bfc
+          path: ${{ runner.temp }}/rew-toml-v3.rew
           if-no-files-found: error
           retention-days: 7
 
@@ -191,7 +191,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          capsule="$RUNNER_TEMP/toml-capsule/rew-toml-v3.bfc"
+          capsule="$RUNNER_TEMP/toml-capsule/rew-toml-v3.rew"
           test -s "$capsule"
 
           echo "=== CAPSULE SHA-256 ==="

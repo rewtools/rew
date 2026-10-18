@@ -22,7 +22,7 @@
 
 </div>
 
-REW is an experimental open-source CLI that packages a failed Go build, selected workspace files, and verified dependency artifacts into a portable `.bfc` capsule.
+REW is an experimental open-source CLI that packages a failed Go build, selected workspace files, and verified dependency artifacts into a portable `.rew` capsule.
 
 The capsule can then be replayed inside a constrained Linux Docker container without network access from the container.
 
@@ -44,7 +44,7 @@ REW explores a different debugging workflow:
 
 1. Run a build through REW.
 2. Capture a failed execution and its required inputs.
-3. Transfer the resulting `.bfc` capsule.
+3. Transfer the resulting `.rew` capsule.
 4. Verify the capsule and replay the build in Docker.
 5. Compare the original and replayed failure.
 
@@ -70,6 +70,8 @@ The schema-v3 prototype supports:
 REW also retains older experimental capture/replay modes.
 
 The schema-v3 format is experimental and may change.
+
+**Capsule filename compatibility:** Development builds use `failure.rew` for new schema-v3 captures. Existing `.bfc` capsules remain readable by schema-v3 audit and replay. Legacy capture modes continue to create `failure.bfc`. The published v0.1.0-alpha.5 binaries predate this change.
 
 Projects with no external Go dependencies are supported. For these
 projects, the capsule contains no dependency artifacts.
@@ -221,7 +223,7 @@ GOWORK=off GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
   -- go build ./...
 ```
 
-The build fails intentionally and REW saves `failure.bfc`.
+The build fails intentionally and REW saves `failure.rew`.
 A successful capture normally returns the original build's
 nonzero exit code.
 
@@ -231,7 +233,7 @@ REW does not create `go.sum` in the source project.
 Replay the failure using Docker:
 
 ```sh
-"$REW_BIN" replay --v3 --allow-command --memory 1g failure.bfc
+"$REW_BIN" replay --v3 --allow-command --memory 1g failure.rew
 ```
 
 Expected output:
@@ -286,7 +288,7 @@ that source target. Results are deduplicated. Discovery is not sandboxed:
 use it only with trusted source trees.
 
 **Privacy:** selected source files, embedded resources, and explicit
-includes become part of the `.bfc` capsule. Review the contents and
+includes become part of the `.rew` capsule. Review the contents and
 avoid sharing capsules containing secrets or confidential source code.
 
 The current schema-v3 workspace limit is
@@ -294,12 +296,12 @@ The current schema-v3 workspace limit is
 
 ## Understanding Replay Results
 
-Make the `.bfc` capsule available on a machine with a supported Docker environment.
+Make the `.rew` capsule available on a machine with a supported Docker environment.
 
 Run:
 
 ```sh
-"$REW_BIN" replay --v3 --allow-command failure.bfc
+"$REW_BIN" replay --v3 --allow-command failure.rew
 ```
 
 When Replay v3 returns `different_failure` (exit code `11`), it also
@@ -319,8 +321,8 @@ By default, REW does not print the full stderr difference.
 
 To inspect the original and replayed stderr, use:
 
-    rew replay --v3 --allow-command --show-stderr failure.bfc
-    rew replay --v3 --allow-command --memory 1g --show-stderr failure.bfc
+    rew replay --v3 --allow-command --show-stderr failure.rew
+    rew replay --v3 --allow-command --memory 1g --show-stderr failure.rew
 
 Diagnostic output is limited to 16 KiB per stderr stream.
 Truncation is explicitly indicated. Stderr may contain sensitive data.
@@ -334,7 +336,7 @@ Schema-v3 replay uses 256 MiB of container memory by default.
 
 For memory-intensive builds or AMD64 emulation on ARM64, use:
 
-    "$REW_BIN" replay --v3 --allow-command --memory 1g failure.bfc
+    "$REW_BIN" replay --v3 --allow-command --memory 1g failure.rew
 
 Supported values: 256m, 512m, 1g, 2g. Maximum: 2 GiB.
 This option applies only to schema-v3 replay.
@@ -461,13 +463,13 @@ If the environment is unsupported, Capture exits with code `125`.
 For example, on macOS where CGO is enabled by default, set
 `CGO_ENABLED=0` before capture.
 
-The output file `failure.bfc` is never overwritten. If it already exists,
+The output file `failure.rew` is never overwritten. If it already exists,
 move or rename it before repeating Capture. REW checks this before
 executing the build and retains exclusive file creation protection.
 
 The build is expected to fail because `undefinedFunction` does not exist.
 
-REW saves `failure.bfc` in the current working directory when the failed build satisfies the supported capture requirements.
+REW saves `failure.rew` in the current working directory when the failed build satisfies the supported capture requirements.
 
 A successfully captured compiler failure normally preserves the original nonzero build exit code.
 
@@ -476,7 +478,7 @@ If capture itself fails, REW may exit with code `125` and will not produce a val
 
 ## What Is Inside a Capsule?
 
-A schema-v3 `.bfc` capsule contains:
+A schema-v3 `.rew` capsule contains:
 
 - A JSON manifest describing the captured execution.
 - Selected workspace files and their integrity metadata.
@@ -493,7 +495,7 @@ Integrity verification is not the same as authenticating who created a capsule.
 
 ## Capsule Share Audit (Development Source)
 
-The development-source CLI includes `rew audit failure.bfc`.
+The development-source CLI includes `rew audit failure.rew`.
 This command is not included in the published v0.1.0-alpha.5 binaries.
 
 It verifies schema-v3 capsule integrity and performs limited checks for
@@ -501,7 +503,7 @@ sensitive workspace filenames and known credential assignments in command
 arguments, stdout, stderr, and verified workspace file contents.
 
 ```sh
-rew audit failure.bfc
+rew audit failure.rew
 ```
 
 Exit codes: 0 = no findings from supported checks; 2 = invalid arguments;

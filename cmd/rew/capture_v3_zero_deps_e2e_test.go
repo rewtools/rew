@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -58,7 +59,7 @@ func main() {
 		}
 	}
 
-	capsulePath := filepath.Join(t.TempDir(), "failure.bfc")
+	capsulePath := filepath.Join(t.TempDir(), "failure.rew")
 
 	captureExit := captureCommandV3(
 		[]string{"go", "build", "./..."},
@@ -122,5 +123,54 @@ func main() {
 		)
 	}
 
-	t.Log("schema v3 zero-dependency offline replay reproduced")
+	originalBytes, err := os.ReadFile(capsulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	originalHash := sha256.Sum256(originalBytes)
+
+	legacyPath := filepath.Join(t.TempDir(), "failure.bfc")
+	if err := os.WriteFile(legacyPath, originalBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	legacyResult, err := replay.RunV3WithOptions(
+		ctx,
+		legacyPath,
+		replay.Options{AllowArbitraryCommand: true},
+	)
+	if err != nil {
+		t.Fatalf("legacy .bfc offline replay: %v", err)
+	}
+
+	if legacyResult.Outcome != replay.OutcomeReproduced {
+		t.Fatalf(
+			"legacy outcome=%q, original=%d, replay=%d",
+			legacyResult.Outcome,
+			legacyResult.OriginalExitCode,
+			legacyResult.ReplayExitCode,
+		)
+	}
+
+	if legacyResult.OriginalExitCode != 1 ||
+		legacyResult.ReplayExitCode != 1 {
+		t.Fatalf(
+			"legacy exit codes: original=%d replay=%d",
+			legacyResult.OriginalExitCode,
+			legacyResult.ReplayExitCode,
+		)
+	}
+
+	for _, path := range []string{capsulePath, legacyPath} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sha256.Sum256(data) != originalHash {
+			t.Fatalf("capsule SHA-256 changed: %s", path)
+		}
+	}
+
+	t.Log("schema v3 .rew and legacy .bfc offline replay reproduced")
 }

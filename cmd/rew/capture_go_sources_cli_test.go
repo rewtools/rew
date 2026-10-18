@@ -67,7 +67,11 @@ func helper() {}
 		t.Fatalf("capture exit = %d, want 1", got)
 	}
 
-	output := filepath.Join(root, "failure.bfc")
+	output := filepath.Join(root, "failure.rew")
+
+	if _, err := os.Lstat(filepath.Join(root, "failure.bfc")); !os.IsNotExist(err) {
+		t.Fatalf("legacy default output unexpectedly created: %v", err)
+	}
 
 	verified, err := capsule.ReadVerifiedV3(output)
 	if err != nil {

@@ -115,7 +115,7 @@ func run(args []string) int {
 				args[i+1:],
 				".",
 				includes,
-				"failure.bfc",
+				"failure.rew",
 				includeGoEmbed,
 				includeGoSources,
 			)

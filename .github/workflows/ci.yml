@@ -463,7 +463,7 @@ jobs:
           capture_exit=$?
           set -e
 
-          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.bfc ]; then
+          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.rew ]; then
             echo "Schema-v3 capture failed validation (exit=$capture_exit)"
             cat "$capture_stdout"
             cat "$capture_stderr" >&2
@@ -472,13 +472,13 @@ jobs:
 
           echo "Expected schema-v3 compiler failure captured successfully"
 
-          cp failure.bfc "$RUNNER_TEMP/rew-v3.bfc"
+          cp failure.rew "$RUNNER_TEMP/rew-v3.rew"
 
       - name: Upload schema v3 capsule
         uses: actions/upload-artifact@v6
         with:
           name: cross-platform-go-v3-capsule
-          path: ${{ runner.temp }}/rew-v3.bfc
+          path: ${{ runner.temp }}/rew-v3.rew
           if-no-files-found: error
           retention-days: 7
 
@@ -516,7 +516,7 @@ jobs:
 
           docker version
 
-          capsule="$RUNNER_TEMP/rew-v3/rew-v3.bfc"
+          capsule="$RUNNER_TEMP/rew-v3/rew-v3.rew"
           test -s "$capsule"
 
           set +e
@@ -618,12 +618,12 @@ jobs:
           cat "$RUNNER_TEMP/go125-capture.stdout"
           cat "$RUNNER_TEMP/go125-capture.stderr"
 
-          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.bfc ]; then
+          if [ "$capture_exit" -ne 1 ] || [ ! -s failure.rew ]; then
             echo "Go 1.25.14 capture failed: exit=$capture_exit"
             exit 1
           fi
 
-          python3 - failure.bfc <<'PYVERIFY'
+          python3 - failure.rew <<'PYVERIFY'
           import json
           import sys
           import tarfile
@@ -642,13 +642,13 @@ jobs:
           print("PASS: schema-v3 capsule records Go 1.25.14")
           PYVERIFY
 
-          cp failure.bfc "$RUNNER_TEMP/rew-go125.bfc"
+          cp failure.rew "$RUNNER_TEMP/rew-go125.rew"
 
       - name: Upload Go 1.25.14 capsule
         uses: actions/upload-artifact@v6
         with:
           name: cross-platform-go125-v3-capsule
-          path: ${{ runner.temp }}/rew-go125.bfc
+          path: ${{ runner.temp }}/rew-go125.rew
           if-no-files-found: error
           retention-days: 7
 
@@ -686,7 +686,7 @@ jobs:
 
           docker version
 
-          capsule="$RUNNER_TEMP/rew-go125/rew-go125.bfc"
+          capsule="$RUNNER_TEMP/rew-go125/rew-go125.rew"
           test -s "$capsule"
 
           set +e

@@ -27,7 +27,7 @@ func runReplay(args []string) int {
 	const usage = "Usage:\n" +
 		"  rew replay [--allow-command] <capsule.bfc>\n" +
 		"  rew replay --v2 --allow-command [--diagnose-dependencies] <capsule.bfc>\n" +
-		"  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.bfc>"
+		"  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.rew>"
 
 	var capsulePath string
 	var options replay.Options

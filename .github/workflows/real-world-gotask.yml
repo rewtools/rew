@@ -147,10 +147,10 @@ jobs:
           test "$capture_exit" -eq 1
           grep -q 'undefined: rewIntentionallyUndefined' \
             "$RUNNER_TEMP/gotask-capture.stderr"
-          test -s failure.bfc
+          test -s failure.rew
 
           echo "=== CAPSULE AUDIT ==="
-          "$GITHUB_WORKSPACE/rew" audit failure.bfc \
+          "$GITHUB_WORKSPACE/rew" audit failure.rew \
             > "$RUNNER_TEMP/gotask-audit.stdout"
 
           cat "$RUNNER_TEMP/gotask-audit.stdout"
@@ -168,7 +168,7 @@ jobs:
             "$RUNNER_TEMP/gotask-audit.stdout"
 
           echo "=== VERIFY CAPSULE CONTENTS ==="
-          python3 - failure.bfc <<'PY'
+          python3 - failure.rew <<'PY'
           import json
           import sys
           import tarfile
@@ -195,10 +195,10 @@ jobs:
           print("PASS: Go-Task schema-v3 manifest verified")
           PY
 
-          cp failure.bfc "$RUNNER_TEMP/rew-gotask-v3.bfc"
+          cp failure.rew "$RUNNER_TEMP/rew-gotask-v3.rew"
           (
             cd "$RUNNER_TEMP"
-            shasum -a 256 rew-gotask-v3.bfc > rew-gotask-v3.sha256
+            shasum -a 256 rew-gotask-v3.rew > rew-gotask-v3.sha256
             shasum -a 256 -c rew-gotask-v3.sha256
           )
 
@@ -209,7 +209,7 @@ jobs:
         with:
           name: real-world-gotask-v3-capsule
           path: |
-            ${{ runner.temp }}/rew-gotask-v3.bfc
+            ${{ runner.temp }}/rew-gotask-v3.rew
             ${{ runner.temp }}/rew-gotask-v3.sha256
           if-no-files-found: error
           retention-days: 1
@@ -255,7 +255,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          capsule="$RUNNER_TEMP/gotask-capsule/rew-gotask-v3.bfc"
+          capsule="$RUNNER_TEMP/gotask-capsule/rew-gotask-v3.rew"
           test -s "$capsule"
 
           echo "=== VERIFY TRANSFERRED CAPSULE SHA-256 ==="

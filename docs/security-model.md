@@ -22,7 +22,7 @@ are verified against the recorded ZIP, MOD, INFO, and go.sum metadata;
 additional graph-only artifacts are validated according to their
 recorded checksums and manifest requirements.
 
-This document describes the path from a verified `.bfc` capsule to
+This document describes the path from a verified schema-v3 capsule (`.rew` or legacy `.bfc`) to
 execution in a restricted Docker container.
 
 ## Sensitive Environment Preflight
@@ -109,7 +109,7 @@ The command is not available in published alpha.5 binaries.
 
 The current schema-v3 replay implementation:
 
-1. Opens and verifies the `.bfc` capsule.
+1. Opens and verifies the schema-v3 capsule (`.rew` or legacy `.bfc`).
 2. Validates workspace metadata, file contents, and Go module artifacts.
 3. Builds a workspace TAR from verified capsule bytes.
 4. Builds a Go module download-cache TAR from verified artifacts,
