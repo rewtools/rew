@@ -192,7 +192,7 @@ data), and 125 (verification or cleanup failure).
 It does not execute the recorded build, require Docker, or scan dependency
 ZIP contents. Other sensitive information may remain undetected.
 Zero findings does not establish that sharing is safe.
-The historical alpha.5 binaries do not include this command. The planned alpha.6 release includes it.
+The historical alpha.5 binaries do not include this command. The published alpha.6 release includes it.
 
 REW does not currently promise comprehensive secret detection or redaction.
 
