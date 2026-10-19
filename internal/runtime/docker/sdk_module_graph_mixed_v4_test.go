@@ -7,7 +7,7 @@ import (
 
 func validMixedDockerGraphV4() string {
 	return `{"Path":"example.com/app","Main":true,"Dir":"/workspace/app","GoMod":"/workspace/app/go.mod"}` + "\n" +
-		`{"Path":"example.com/external","Version":"v1.0.0"}` + "\n" +
+		`{"Path":"example.com/external","Version":"v1.0.0","Dir":"/gomodcache/example.com/external@v1.0.0","GoMod":"/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod"}` + "\n" +
 		`{"Path":"example.com/local-lib","Version":"v0.0.0","Dir":"/workspace/lib","GoMod":"/workspace/lib/go.mod","Replace":{"Path":"../lib","Dir":"/workspace/lib","GoMod":"/workspace/lib/go.mod"}}` + "\n"
 }
 
@@ -46,7 +46,7 @@ func TestVerifyDockerGoModuleGraphMixedV4(t *testing.T) {
 			name: "missing external module",
 			graph: strings.Replace(
 				valid,
-				`{"Path":"example.com/external","Version":"v1.0.0"}`+"\n",
+				`{"Path":"example.com/external","Version":"v1.0.0","Dir":"/gomodcache/example.com/external@v1.0.0","GoMod":"/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod"}`+"\n",
 				"", 1,
 			),
 			wantErr: true,
@@ -55,8 +55,8 @@ func TestVerifyDockerGoModuleGraphMixedV4(t *testing.T) {
 			name: "external module replacement",
 			graph: strings.Replace(
 				valid,
-				`{"Path":"example.com/external","Version":"v1.0.0"}`,
-				`{"Path":"example.com/external","Version":"v1.0.0","Replace":{"Path":"../other"}}`,
+				`"GoMod":"/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod"}`,
+				`"GoMod":"/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod","Replace":{"Path":"../other"}}`,
 				1,
 			),
 			wantErr: true,
@@ -299,4 +299,119 @@ func TestMixedV4GraphSecurityBoundaries(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMixedV4ExternalCachePaths(t *testing.T) {
+	valid := validMixedDockerGraphV4()
+
+	cases := []struct {
+		name string
+		old  string
+		new  string
+	}{
+		{
+			name: "wrong module directory",
+			old:  `"Dir":"/gomodcache/example.com/external@v1.0.0"`,
+			new:  `"Dir":"/tmp/untrusted"`,
+		},
+		{
+			name: "wrong go mod path",
+			old:  `"GoMod":"/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod"`,
+			new:  `"GoMod":"/tmp/untrusted.mod"`,
+		},
+		{
+			name: "missing module directory",
+			old:  `,"Dir":"/gomodcache/example.com/external@v1.0.0"`,
+			new:  "",
+		},
+		{
+			name: "missing go mod path",
+			old:  `,"GoMod":"/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod"`,
+			new:  "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if strings.Count(valid, tc.old) != 1 {
+				t.Fatal("unexpected fixture layout")
+			}
+
+			graph := strings.Replace(valid, tc.old, tc.new, 1)
+
+			err := verifyDockerGoModuleGraphMixedV4(
+				[]byte(graph),
+				"example.com/app",
+				"example.com/local-lib",
+				"/workspace/lib",
+				"example.com/external",
+				"v1.0.0",
+			)
+			if err == nil {
+				t.Fatal(
+					"SECURITY FAILURE: invalid external cache path accepted",
+				)
+			}
+		})
+	}
+}
+
+func TestMixedV4ExternalEscapedModulePath(t *testing.T) {
+	const external = "example.com/UpperCase"
+	const escaped = "example.com/!upper!case"
+	const version = "v1.0.0"
+
+	graph := validMixedDockerGraphV4()
+
+	oldIdentity := `"Path":"example.com/external"`
+	if strings.Count(graph, oldIdentity) != 1 {
+		t.Fatal("unexpected external identity fixture")
+	}
+
+	graph = strings.Replace(
+		graph,
+		oldIdentity,
+		`"Path":"`+external+`"`,
+		1,
+	)
+
+	oldCachePath := "/gomodcache/example.com/external@v1.0.0"
+	newCachePath := "/gomodcache/" + escaped + "@v1.0.0"
+
+	oldModPath := "/gomodcache/cache/download/example.com/external/@v/v1.0.0.mod"
+	newModPath := "/gomodcache/cache/download/" + escaped + "/@v/v1.0.0.mod"
+
+	if strings.Count(graph, oldCachePath) != 1 ||
+		strings.Count(graph, oldModPath) != 1 {
+		t.Fatal("unexpected external cache fixture")
+	}
+
+	escapedGraph := strings.Replace(graph, oldCachePath, newCachePath, 1)
+	escapedGraph = strings.Replace(escapedGraph, oldModPath, newModPath, 1)
+
+	verify := func(value string) error {
+		return verifyDockerGoModuleGraphMixedV4(
+			[]byte(value),
+			"example.com/app",
+			"example.com/local-lib",
+			"/workspace/lib",
+			external,
+			version,
+		)
+	}
+
+	t.Run("escaped cache paths accepted", func(t *testing.T) {
+		if err := verify(escapedGraph); err != nil {
+			t.Fatalf("valid escaped module path rejected: %v", err)
+		}
+	})
+
+	t.Run("unescaped cache paths rejected", func(t *testing.T) {
+		unescaped := strings.Replace(
+			escapedGraph, escaped, external, 2,
+		)
+		if err := verify(unescaped); err == nil {
+			t.Fatal("unescaped external module cache path accepted")
+		}
+	})
 }

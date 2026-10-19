@@ -157,8 +157,28 @@ func verifyDockerGoModuleGraphMixedV4(
 			seenLocal = true
 
 		case externalModule:
+			escapedPath, err := module.EscapePath(externalModule)
+			if err != nil {
+				return fmt.Errorf(
+					"docker SDK: escape external module path: %w", err,
+				)
+			}
+			escapedVersion, err := module.EscapeVersion(externalVersion)
+			if err != nil {
+				return fmt.Errorf(
+					"docker SDK: escape external module version: %w", err,
+				)
+			}
+
+			expectedDir := "/gomodcache/" +
+				escapedPath + "@" + escapedVersion
+			expectedGoMod := "/gomodcache/cache/download/" +
+				escapedPath + "/@v/" + escapedVersion + ".mod"
+
 			if seenExternal ||
 				item.Version != externalVersion ||
+				item.Dir != expectedDir ||
+				item.GoMod != expectedGoMod ||
 				(len(item.Replace) != 0 &&
 					string(item.Replace) != "null") {
 				return fmt.Errorf(
@@ -166,9 +186,6 @@ func verifyDockerGoModuleGraphMixedV4(
 				)
 			}
 
-			// External Dir/GoMod are not asserted yet.
-			// Their exact paths must be established from real
-			// Go 1.26 output before strengthening this contract.
 			seenExternal = true
 
 		default:
