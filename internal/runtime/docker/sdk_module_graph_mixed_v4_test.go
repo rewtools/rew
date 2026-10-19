@@ -415,3 +415,56 @@ func TestMixedV4ExternalEscapedModulePath(t *testing.T) {
 		}
 	})
 }
+
+func TestMixedV4ExternalRealGoMetadata(t *testing.T) {
+	valid := validMixedDockerGraphV4()
+
+	anchor := `{"Path":"example.com/external","Version":"v1.0.0",`
+	if strings.Count(valid, anchor) != 1 {
+		t.Fatal("unexpected external module fixture")
+	}
+
+	t.Run("real Go 1.26 external metadata accepted", func(t *testing.T) {
+		withMetadata := strings.Replace(
+			valid,
+			anchor,
+			anchor+`"Time":"2026-01-01T00:00:00Z",`+
+				`"Sum":"h1:fixturechecksum",`+
+				`"GoModSum":"h1:fixturegomodchecksum",`,
+			1,
+		)
+
+		err := verifyDockerGoModuleGraphMixedV4(
+			[]byte(withMetadata),
+			"example.com/app",
+			"example.com/local-lib",
+			"/workspace/lib",
+			"example.com/external",
+			"v1.0.0",
+		)
+		if err != nil {
+			t.Fatalf("valid external Go metadata rejected: %v", err)
+		}
+	})
+
+	t.Run("unexpected metadata field rejected", func(t *testing.T) {
+		withUnknown := strings.Replace(
+			valid,
+			anchor,
+			anchor+`"UntrustedExtraField":"value",`,
+			1,
+		)
+
+		err := verifyDockerGoModuleGraphMixedV4(
+			[]byte(withUnknown),
+			"example.com/app",
+			"example.com/local-lib",
+			"/workspace/lib",
+			"example.com/external",
+			"v1.0.0",
+		)
+		if err == nil {
+			t.Fatal("unexpected JSON field accepted")
+		}
+	})
+}

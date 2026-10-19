@@ -9,6 +9,13 @@ import (
 	"golang.org/x/mod/module"
 )
 
+type dockerListedMixedGoModuleV4 struct {
+	dockerListedGoModuleV4
+	Time     string `json:"Time"`
+	Sum      string `json:"Sum"`
+	GoModSum string `json:"GoModSum"`
+}
+
 // verifyDockerGoModuleGraphMixedV4 validates the initial
 // mixed-dependency V4 profile: one main module, one local
 // replacement, and one exact external module.
@@ -61,7 +68,7 @@ func verifyDockerGoModuleGraphMixedV4(
 	count := 0
 
 	for {
-		var item dockerListedGoModuleV4
+		var item dockerListedMixedGoModuleV4
 
 		err := decoder.Decode(&item)
 		if err == io.EOF {

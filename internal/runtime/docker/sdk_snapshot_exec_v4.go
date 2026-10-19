@@ -29,6 +29,62 @@ func RunWithSDKRuntimeSnapshotExecReadersV4(
 	user string,
 	stdout, stderr io.Writer,
 	runtime *RuntimeSpec,
+) (int, error) {
+	return runWithSDKRuntimeSnapshotExecReadersV4(
+		ctx, workspaceTAR, moduleTAR, argv,
+		mainModule, localModule, "", "",
+		memoryBytes, user, stdout, stderr, runtime,
+	)
+}
+
+// RunWithSDKRuntimeSnapshotExecReadersMixedV4 replays a mixed V4
+// graph with one local replacement and one external Go module.
+// Both TAR readers must originate from verified capsule data.
+func RunWithSDKRuntimeSnapshotExecReadersMixedV4(
+	ctx context.Context,
+	workspaceTAR io.Reader,
+	moduleTAR io.Reader,
+	argv []string,
+	mainModule string,
+	localModule string,
+	externalModule string,
+	externalVersion string,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
+) (int, error) {
+	if err := module.Check(externalModule, externalVersion); err != nil {
+		return 0, fmt.Errorf(
+			"docker SDK: invalid mixed v4 external module: %w", err,
+		)
+	}
+	if externalModule == mainModule || externalModule == localModule {
+		return 0, fmt.Errorf(
+			"docker SDK: mixed v4 external module overlaps local graph",
+		)
+	}
+	return runWithSDKRuntimeSnapshotExecReadersV4(
+		ctx, workspaceTAR, moduleTAR, argv,
+		mainModule, localModule, externalModule, externalVersion,
+		memoryBytes, user, stdout, stderr, runtime,
+	)
+}
+
+func runWithSDKRuntimeSnapshotExecReadersV4(
+
+	ctx context.Context,
+	workspaceTAR io.Reader,
+	moduleTAR io.Reader,
+	argv []string,
+	mainModule string,
+	localModule string,
+	externalModule string,
+	externalVersion string,
+	memoryBytes int64,
+	user string,
+	stdout, stderr io.Writer,
+	runtime *RuntimeSpec,
 ) (exitCode int, runErr error) {
 	if err := module.CheckPath(mainModule); err != nil {
 		return 0, fmt.Errorf("docker SDK: invalid main module: %w", err)
@@ -196,6 +252,30 @@ func RunWithSDKRuntimeSnapshotExecReadersV4(
 		)
 	}
 
+	if externalModule != "" {
+		downloadCode, _, downloadStderr, downloadErr :=
+			executeInContainerAtDirectory(
+				execCtx, dockerClient, created.ID, user,
+				snapshotExecWorkingDirV4,
+				[]string{
+					"go", "mod", "download",
+					externalModule + "@" + externalVersion,
+				},
+			)
+		if downloadErr != nil {
+			return 0, fmt.Errorf(
+				"docker SDK: mixed v4 offline module preparation: %w",
+				downloadErr,
+			)
+		}
+		if downloadCode != 0 {
+			return 0, fmt.Errorf(
+				"docker SDK: mixed v4 offline module preparation failed (%d): %s",
+				downloadCode, string(downloadStderr),
+			)
+		}
+	}
+
 	graphCode, graphOutput, graphStderr, err :=
 		executeInContainerAtDirectory(
 			execCtx, dockerClient, created.ID, user,
@@ -213,12 +293,27 @@ func RunWithSDKRuntimeSnapshotExecReadersV4(
 			graphCode, string(graphStderr),
 		)
 	}
-	if err := verifyDockerGoModuleGraphV4(
-		graphOutput, mainModule, localModule,
-		"/workspace/lib",
-	); err != nil {
+	var graphErr error
+	if externalModule != "" {
+		graphErr = verifyDockerGoModuleGraphMixedV4(
+			graphOutput,
+			mainModule,
+			localModule,
+			"/workspace/lib",
+			externalModule,
+			externalVersion,
+		)
+	} else {
+		graphErr = verifyDockerGoModuleGraphV4(
+			graphOutput,
+			mainModule,
+			localModule,
+			"/workspace/lib",
+		)
+	}
+	if graphErr != nil {
 		return 0, fmt.Errorf(
-			"docker SDK: v4 module graph mismatch: %w", err,
+			"docker SDK: v4 module graph mismatch: %w", graphErr,
 		)
 	}
 
