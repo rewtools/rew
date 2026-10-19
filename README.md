@@ -249,9 +249,10 @@ After building REW, you can inspect its available commands:
     ./rew audit --help
     ./rew --version
 
-The `capture` and `replay` help commands describe the supported schema-v3
-workflow. Older experimental modes remain available but are not the
-recommended starting point.
+The `capture` and `replay` help commands describe both schema-v3
+and experimental schema-v4 workflows. Schema V4 is available from
+development source, not the published alpha.6 binaries. Older
+experimental modes remain available.
 
 ## Quick Start: Reproduce a Failed Build
 
