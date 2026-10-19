@@ -176,7 +176,9 @@ func runReplay(args []string) int {
 
 	switch {
 	case useV4:
-		result, err = replay.RunV4WithOptions(ctx, capsulePath, options)
+		result, err = runPinnedV4ReplayPath(
+			ctx, capsulePath, options,
+		)
 	case useV3:
 		result, err = replay.RunV3WithOptions(ctx, capsulePath, options)
 	case useV2:

@@ -71,14 +71,20 @@ REW also retains older experimental capture/replay modes.
 
 The schema-v3 format is experimental and may change.
 
-## Experimental Schema V4 — Local Module Replace
+## Experimental Schema V4 — Local and Mixed Go Dependencies
 
 Schema V4 is available when building REW from the current development
 source. It is **not part of the published v0.1.0-alpha.6 binaries**.
 
 V4 extends the supported Go build workflow to a project containing
-exactly one sibling local module replacement, with no external
-module dependencies.
+exactly one sibling local module replacement (`../lib`). Two
+profiles are implemented: local-only and mixed dependencies.
+The mixed profile additionally supports exactly one versioned
+external Go module with verified ZIP, MOD, and INFO artifacts
+already available in the local Go module cache. The mixed
+profile requires a real, captured `app/go.sum`; it cannot
+synthesize an empty one. Neither profile is a general-purpose
+Go dependency graph snapshot.
 
 Example project layout:
 
@@ -120,10 +126,19 @@ In the validated two-module compiler-error example, Docker replay
 returned the same exit code and compiler error, with
 `Outcome: reproduced`.
 
-V4 currently supports only `go build ./...`, one sibling local
-replacement, and the supported offline Linux/amd64 target with CGO
-disabled. The required Go toolchain and replay image must be
-available. A `failure.rew` file is not overwritten.
+V4 currently supports only `go build ./...`, exactly one sibling
+local replacement and at most one external versioned Go module.
+The mixed profile requires all external module artifacts to be
+available and verifiable offline; downloading dependencies is
+not part of this workflow. Multiple external modules, multiple
+local replacements, active `go.work`, and arbitrary dependency
+graphs are unsupported.
+
+Replay targets Linux/amd64 with CGO disabled and requires the
+supported Go runtime, an available Docker replay image, and
+explicit `--allow-command` consent. V4 archives are subject to
+the existing bounded capsule-size limits. An existing
+`failure.rew` is never overwritten.
 
 **Security limitations:** V4 embeds selected source files from both
 modules and may capture sensitive stderr. Filesystem capture is not

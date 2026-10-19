@@ -38,6 +38,21 @@ func ReadVerifiedV4(filename string) (VerifiedCapsuleV4, error) {
 	}
 	defer f.Close()
 
+	return ReadVerifiedV4FromFile(f)
+}
+
+// ReadVerifiedV4FromFile verifies a V4 capsule using an existing
+// open file descriptor. The caller retains ownership of f.
+// The file offset is reset before reading.
+func ReadVerifiedV4FromFile(f *os.File) (VerifiedCapsuleV4, error) {
+	var empty VerifiedCapsuleV4
+	if f == nil {
+		return empty, fmt.Errorf("capsule: nil v4 archive file")
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return empty, fmt.Errorf("capsule: seek v4 archive: %w", err)
+	}
+
 	info, err := f.Stat()
 	if err != nil {
 		return empty, fmt.Errorf("capsule: stat v4 archive: %w", err)
