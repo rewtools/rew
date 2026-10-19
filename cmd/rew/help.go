@@ -26,10 +26,22 @@ func printCaptureHelp() {
 	fmt.Println(`Capture a failed Go build into a portable .rew capsule.
 
 Usage:
+  rew capture --v4 --include-go-sources -- go build ./...
   rew capture --v3 --include-go-sources [--include-go-embed] -- go build ./...
   rew capture --v3 --include <file> ... [--include-go-embed] -- go build ./...
 
-Requirements:
+Schema V4 (experimental):
+  Supports exactly one sibling local Go module replacement
+  with no external module dependencies.
+  Supports exactly: go build ./...
+  Captures selected sources from both the main and local modules.
+  Uses an offline Linux/amd64 target with CGO disabled.
+  Saves failure.rew and refuses to overwrite an existing output.
+  Requires a supported Go toolchain and offline source discovery.
+  Source capture is not an atomic filesystem snapshot.
+  See docs/schema-v4-security.md for security limitations.
+
+Schema V3 requirements:
   Schema-v3 Go runtime: 1.25.14 or 1.26.6 (exact patch versions)
   GOOS/GOARCH: darwin/arm64 or linux/amd64
   CGO_ENABLED=0 and empty GOFLAGS
@@ -47,6 +59,7 @@ Requirements:
   Active Go workspaces are unsupported
 
 Examples:
+  rew capture --v4 --include-go-sources -- go build ./...
   rew capture --v3 --include-go-sources -- go build ./...
 
   rew capture --v3 \
@@ -70,7 +83,14 @@ func printReplayHelp() {
 	fmt.Println(`Verify and replay a captured failure using Docker.
 
 Usage:
+  rew replay --v4 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.rew>
   rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] <capsule.rew>
+
+Schema V4:
+  Replays verified schema-v4 capsules with supported offline
+  local-module layout and the recorded Go build failure.
+  --show-stderr prints captured and replayed stderr.
+  Only replay capsules from trusted sources.
 
 Requirements:
   Docker Engine with Linux AMD64 container execution
@@ -81,6 +101,7 @@ Memory:
   Allowed: 256m, 512m, 1g, 2g
 
 Examples:
+  rew replay --v4 --allow-command --memory 512m --show-stderr failure.rew
   rew replay --v3 --allow-command failure.rew
   rew replay --v3 --allow-command --memory 1g failure.rew
 

@@ -71,6 +71,72 @@ REW also retains older experimental capture/replay modes.
 
 The schema-v3 format is experimental and may change.
 
+## Experimental Schema V4 — Local Module Replace
+
+Schema V4 is available when building REW from the current development
+source. It is **not part of the published v0.1.0-alpha.6 binaries**.
+
+V4 extends the supported Go build workflow to a project containing
+exactly one sibling local module replacement, with no external
+module dependencies.
+
+Example project layout:
+
+    project/
+    ├── app/
+    │   ├── go.mod
+    │   └── main.go
+    └── lib/
+        ├── go.mod
+        └── lib.go
+
+In `app/go.mod`, the local module is referenced using a replace
+directive such as:
+
+    module example.com/app
+
+    go 1.25
+
+    require example.com/local-lib v0.0.0
+
+    replace example.com/local-lib => ../lib
+
+Build REW from development source, then run it from the `app/`
+directory. Use the absolute path to the compiled REW binary.
+
+Capture a failing Go build:
+
+    "$REW_BIN" capture --v4 --include-go-sources -- go build ./...
+
+A supported failed build produces `failure.rew` and normally returns
+the original nonzero build exit code. Successful builds do not
+produce a failure capsule.
+
+Replay that capsule with Docker:
+
+    "$REW_BIN" replay --v4 --allow-command --memory 512m --show-stderr failure.rew
+
+In the validated two-module compiler-error example, Docker replay
+returned the same exit code and compiler error, with
+`Outcome: reproduced`.
+
+V4 currently supports only `go build ./...`, one sibling local
+replacement, and the supported offline Linux/amd64 target with CGO
+disabled. The required Go toolchain and replay image must be
+available. A `failure.rew` file is not overwritten.
+
+**Security limitations:** V4 embeds selected source files from both
+modules and may capture sensitive stderr. Filesystem capture is not
+atomic, and concurrent source mutation can undermine the
+relationship between captured files and compiler inputs.
+
+See [Schema V4 security boundaries](docs/schema-v4-security.md)
+before sharing capsules or relying on V4 for reproducibility.
+
+The existing Schema V3 workflow remains supported. Legacy `.bfc`
+compatibility is unchanged.
+
+
 **Capsule filename compatibility:** Schema-v3 capture creates `failure.rew`. Existing `.bfc` capsules remain readable by schema-v3 audit and replay. Legacy capture modes retain `failure.bfc`. The historical v0.1.0-alpha.5 binaries also create `.bfc` capsules.
 
 Projects with no external Go dependencies are supported. For these
