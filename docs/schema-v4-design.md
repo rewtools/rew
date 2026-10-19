@@ -1,6 +1,8 @@
 # REW Schema V4: Local Go Module Replacements
 
-Status: Draft — not implemented or released.
+Status: Experimental MVP implemented and merged into main; not included in the published alpha.6 release.
+
+This document records the original broader design proposal. Not all proposed capabilities are implemented. The current MVP supports one sibling local replacement, without external dependencies. See docs/schema-v4-security.md for implemented scope and security limitations.
 
 ## 1. Goal
 
