@@ -57,6 +57,27 @@ func run(args []string) int {
 			return 0
 		}
 
+		if len(args) >= 2 && args[1] == "--v4" {
+			if len(args) != 7 ||
+				args[2] != "--include-go-sources" ||
+				args[3] != "--" ||
+				args[4] != "go" ||
+				args[5] != "build" ||
+				args[6] != "./..." {
+				fmt.Fprintln(
+					os.Stderr,
+					"Usage: rew capture --v4 --include-go-sources -- go build ./...",
+				)
+				return 2
+			}
+
+			return captureCommandV4(
+				args[4:],
+				".",
+				"failure.rew",
+			)
+		}
+
 		if len(args) >= 2 && args[1] == "--v3" {
 			var includes []string
 			includeGoEmbed := false

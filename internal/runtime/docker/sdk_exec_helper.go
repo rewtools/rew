@@ -43,6 +43,25 @@ func executeInContainer(
 	user string,
 	argv []string,
 ) (int, []byte, []byte, error) {
+	return executeInContainerAtDirectory(
+		ctx, dockerClient, containerID, user,
+		snapshotExecWorkingDirV3, argv,
+	)
+}
+
+// executeInContainerAtDirectory executes inside an allowlisted
+// snapshot workspace directory without changing the V3 default.
+func executeInContainerAtDirectory(
+	ctx context.Context,
+	dockerClient *client.Client,
+	containerID string,
+	user string,
+	workingDir string,
+	argv []string,
+) (int, []byte, []byte, error) {
+	if err := validateSnapshotExecWorkingDirV4(workingDir); err != nil {
+		return 0, nil, nil, err
+	}
 	if len(argv) == 0 {
 		return 0, nil, nil, fmt.Errorf("docker SDK: empty exec argv")
 	}
@@ -63,7 +82,7 @@ func executeInContainer(
 			TTY:          false,
 			AttachStdout: true,
 			AttachStderr: true,
-			WorkingDir:   "/workspace",
+			WorkingDir:   workingDir,
 			Cmd:          argv,
 		},
 	)

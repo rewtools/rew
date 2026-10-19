@@ -27,12 +27,14 @@ func runReplay(args []string) int {
 	const usage = "Usage:\n" +
 		"  rew replay [--allow-command] <capsule.bfc>\n" +
 		"  rew replay --v2 --allow-command [--diagnose-dependencies] <capsule.bfc>\n" +
-		"  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.rew>"
+		"  rew replay --v3 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.rew>\n" +
+		"  rew replay --v4 --allow-command [--memory 256m|512m|1g|2g] [--show-stderr] <capsule.rew>"
 
 	var capsulePath string
 	var options replay.Options
 	var useV2 bool
 	var useV3 bool
+	var useV4 bool
 
 	switch {
 	case len(args) == 1:
@@ -104,6 +106,52 @@ func runReplay(args []string) int {
 		options.ShowStderr = true
 		capsulePath = args[5]
 
+	case len(args) == 3 &&
+		args[0] == "--v4" &&
+		args[1] == "--allow-command":
+		useV4 = true
+		options.AllowArbitraryCommand = true
+		capsulePath = args[2]
+
+	case len(args) == 5 &&
+		args[0] == "--v4" &&
+		args[1] == "--allow-command" &&
+		args[2] == "--memory":
+		memory, err := replay.ParseReplayMemoryV3(args[3])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		useV4 = true
+		options.AllowArbitraryCommand = true
+		options.MemoryBytes = memory
+		capsulePath = args[4]
+
+	case len(args) == 4 &&
+		args[0] == "--v4" &&
+		args[1] == "--allow-command" &&
+		args[2] == "--show-stderr":
+		useV4 = true
+		options.AllowArbitraryCommand = true
+		options.ShowStderr = true
+		capsulePath = args[3]
+
+	case len(args) == 6 &&
+		args[0] == "--v4" &&
+		args[1] == "--allow-command" &&
+		args[2] == "--memory" &&
+		args[4] == "--show-stderr":
+		memory, err := replay.ParseReplayMemoryV3(args[3])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		useV4 = true
+		options.AllowArbitraryCommand = true
+		options.MemoryBytes = memory
+		options.ShowStderr = true
+		capsulePath = args[5]
+
 	default:
 		fmt.Fprintln(os.Stderr, usage)
 		return 2
@@ -120,13 +168,15 @@ func runReplay(args []string) int {
 	)
 	defer stop()
 
-	ctx, cancel := replayContext(signalCtx, useV2 || useV3)
+	ctx, cancel := replayContext(signalCtx, useV2 || useV3 || useV4)
 	defer cancel()
 
 	var result replay.Result
 	var err error
 
 	switch {
+	case useV4:
+		result, err = replay.RunV4WithOptions(ctx, capsulePath, options)
 	case useV3:
 		result, err = replay.RunV3WithOptions(ctx, capsulePath, options)
 	case useV2:
@@ -143,7 +193,7 @@ func runReplay(args []string) int {
 	fmt.Printf("Replay exit code:   %d\n", result.ReplayExitCode)
 	fmt.Printf("Outcome:            %s\n", result.Outcome)
 
-	if useV3 && result.Outcome == replay.OutcomeDifferent {
+	if (useV3 || useV4) && result.Outcome == replay.OutcomeDifferent {
 		switch result.Difference {
 		case replay.DifferenceExitCode:
 			fmt.Println("Difference:         exit codes differ")
@@ -152,7 +202,7 @@ func runReplay(args []string) int {
 		}
 	}
 
-	if useV3 && options.ShowStderr && result.StderrDiagnostics != nil {
+	if (useV3 || useV4) && options.ShowStderr && result.StderrDiagnostics != nil {
 		d := result.StderrDiagnostics
 		printReplayStderrDiagnostics(
 			os.Stdout,
@@ -165,7 +215,7 @@ func runReplay(args []string) int {
 		)
 	}
 
-	if useV3 && options.MemoryBytes != 0 {
+	if (useV3 || useV4) && options.MemoryBytes != 0 {
 		printReplayMemory(os.Stdout, options.MemoryBytes)
 	}
 
