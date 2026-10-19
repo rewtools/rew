@@ -1,6 +1,15 @@
 # Schema V4: Mixed Local and External Go Dependencies
 
-Status: Engineering contract — proposed, not implemented.
+Status: Experimental initial slice implemented in development
+source; not included in the published v0.1.0-alpha.6 binaries.
+
+Implementation evidence includes real failed-build capture,
+complete archive verification, CLI dispatch to local-only or
+mixed replay, and offline Docker reproduction. The supported
+scope remains exactly one sibling local replacement and one
+external versioned Go module. This document also retains
+historical engineering-contract language describing the design
+and test requirements; it is not a claim of general graph support.
 
 ## 1. Objective
 

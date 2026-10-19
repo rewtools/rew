@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/rewtools/rew/internal/capsule"
@@ -148,13 +149,14 @@ func captureCommandV4WithExecutor(
 		return fail("discover offline module graph: %v", err)
 	}
 
-	if len(selected) != 1 ||
-		selected[0].Replace == nil ||
-		selected[0].Replace.Path != replacePath {
-		return fail("MVP requires one local module and no external modules")
+	localIndex, externalIndex, err := classifyCaptureModuleGraphV4(
+		selected, replacePath,
+	)
+	if err != nil {
+		return fail("unsupported module graph: %v", err)
 	}
 
-	selected[0].Replace.SnapshotPath = "lib"
+	selected[localIndex].Replace.SnapshotPath = "lib"
 
 	mainPaths, localPaths, err :=
 		capsule.DiscoverLocalGoSourcesV4WithExecutable(
@@ -166,6 +168,18 @@ func captureCommandV4WithExecutor(
 		)
 	if err != nil {
 		return fail("discover local Go sources: %v", err)
+	}
+
+	if externalIndex != -1 {
+		// The mixed writer requires the actual pinned go.sum bytes.
+		// Do not synthesize a virtual or empty go.sum.
+		for _, name := range mainPaths {
+			if name == "go.sum" {
+				return fail("duplicate mixed v4 go.sum discovery")
+			}
+		}
+		mainPaths = append(mainPaths, "go.sum")
+		sort.Strings(mainPaths)
 	}
 
 	if err := checkSensitiveWorkspacePathsV3(mainPaths); err != nil {
@@ -196,6 +210,71 @@ func captureCommandV4WithExecutor(
 		pinnedMainGoMod, selected,
 	); err != nil {
 		return fail("module graph consistency: %v", err)
+	}
+
+	// Keep verified artifacts available until capture finishes.
+	// The mixed path remains fail-closed below.
+	var mixedStore *capsule.ArtifactStoreV3
+	var mixedGoModules []capsule.GoModuleV3
+
+	if externalIndex != -1 {
+		// Use only the bytes already read through the pinned root.
+		// Never reopen go.sum by its mutable filesystem pathname.
+		var pinnedGoSum []byte
+		foundGoSum := false
+
+		for _, file := range before {
+			if file.Path != "app/go.sum" {
+				continue
+			}
+			if foundGoSum {
+				return fail("duplicate pinned mixed go.sum")
+			}
+			foundGoSum = true
+			pinnedGoSum = file.Data
+		}
+
+		if !foundGoSum {
+			return fail("missing pinned mixed go.sum")
+		}
+
+		externalModules, err := captureExternalModuleIdentitiesV4(
+			selected, replacePath,
+		)
+		if err != nil {
+			return fail("select external Go module: %v", err)
+		}
+		if len(externalModules) != 1 {
+			return fail("expected exactly one external Go module")
+		}
+
+		mixedStore, err = capsule.NewArtifactStoreV3(
+			capsule.MaxGoModuleTotalSizeV3,
+		)
+		if err != nil {
+			return fail("create mixed artifact store: %v", err)
+		}
+		defer mixedStore.Close()
+
+		mixedGoModules, err = capsule.ReadGoModuleArtifactSetToStoreV3(
+			externalModules,
+			pinnedGoSum,
+			cacheRoot,
+			mixedStore,
+		)
+		if err != nil {
+			return fail("capture external Go artifacts: %v", err)
+		}
+
+		if err := capsule.VerifyMixedGoModuleArtifactsV4(
+			selected,
+			mixedGoModules,
+			pinnedGoSum,
+			mixedStore,
+		); err != nil {
+			return fail("verify mixed external Go artifacts: %v", err)
+		}
+
 	}
 
 	fmt.Fprintln(
@@ -255,11 +334,7 @@ func captureCommandV4WithExecutor(
 		return fail("recheck offline module graph: %v", err)
 	}
 
-	if len(afterGraph) != 1 ||
-		afterGraph[0].Replace == nil ||
-		afterGraph[0].Replace.Path != replacePath ||
-		afterGraph[0].Path != selected[0].Path ||
-		afterGraph[0].Version != selected[0].Version {
+	if !captureV4GraphUnchanged(selected, afterGraph) {
 		return fail("Go module graph changed during capture")
 	}
 
@@ -287,34 +362,34 @@ func captureCommandV4WithExecutor(
 		Runtime:           runtimeSpec,
 		GoBuildEnv:        &target,
 		GoSelectedModules: selected,
+		GoModules:         mixedGoModules,
 		LocalModules: []capsule.LocalModuleV4{
 			{
-				ModulePath:   selected[0].Path,
+				ModulePath:   selected[localIndex].Path,
 				SnapshotPath: "lib",
 			},
 		},
 	}
 
-	if err := checkCaptureOutputAvailableV3(output); err != nil {
-		return fail("output changed before packaging: %v", err)
-	}
+	// Stream privately and publish only after a successful write,
+	// sync, and close. Existing output must never be replaced.
+	err = publishCaptureV4(output, func(w io.Writer) error {
+		if externalIndex == -1 {
+			return capsule.WriteWorkspaceV4(w, manifest, before)
+		}
 
-	f, err := os.OpenFile(
-		output, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600,
-	)
-	if err != nil {
-		return fail("create output capsule: %v", err)
-	}
+		if mixedStore == nil || len(mixedGoModules) != 1 {
+			return fmt.Errorf(
+				"missing verified mixed Go module artifacts",
+			)
+		}
 
-	writeErr := capsule.WriteWorkspaceV4(f, manifest, before)
-	closeErr := f.Close()
-
-	if writeErr != nil || closeErr != nil {
-		removeErr := os.Remove(output)
-		return fail(
-			"write capsule: write=%v close=%v cleanup=%v",
-			writeErr, closeErr, removeErr,
+		return capsule.WriteWorkspaceFromStoreV4(
+			w, manifest, before, mixedStore,
 		)
+	})
+	if err != nil {
+		return fail("write capsule: %v", err)
 	}
 
 	fmt.Fprintf(

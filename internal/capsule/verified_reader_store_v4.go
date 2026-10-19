@@ -52,6 +52,22 @@ func ReadVerifiedToStoreV4(
 	}
 	defer f.Close()
 
+	return ReadVerifiedToStoreV4FromFile(f)
+}
+
+// ReadVerifiedToStoreV4FromFile verifies a mixed V4 capsule
+// using an existing open descriptor. The caller retains
+// ownership of f and must close the returned artifact store.
+func ReadVerifiedToStoreV4FromFile(
+	f *os.File,
+) (result VerifiedStoredCapsuleV4, resultErr error) {
+	if f == nil {
+		return result, fmt.Errorf("capsule: nil mixed v4 archive file")
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return result, fmt.Errorf("capsule: seek mixed v4 archive: %w", err)
+	}
+
 	info, err := f.Stat()
 	if err != nil {
 		return result, err

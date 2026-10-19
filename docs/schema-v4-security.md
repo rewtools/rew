@@ -6,16 +6,28 @@ Status: experimental MVP.
 
 Schema V4 capture currently supports:
 
-- A Go workspace with one sibling local module replacement.
+- A Go workspace with exactly one sibling local module replacement
+  (`../lib`).
+- Either a local-only module graph, or a mixed graph containing
+  one additional versioned external Go module.
 - Exactly `go build ./...`.
 - Explicit source inclusion through
   `rew capture --v4 --include-go-sources -- go build ./...`.
 - An offline Linux/amd64 build target with CGO disabled.
 - Portable `.rew` capsules containing the selected source files
   from the main and local modules.
-- Offline Docker replay of supported capsules.
+- For mixed dependencies, verified external ZIP, MOD, and INFO
+  artifacts from the existing local Go module cache, validated
+  against a real captured `app/go.sum`.
+- Offline Docker replay of supported capsules with explicit
+  command-execution consent.
 
 This is not a general-purpose snapshot of an arbitrary Go workspace.
+Multiple local replacements, multiple external versioned modules,
+additional transitive external modules, active `go.work`, and
+arbitrary dependency graphs are outside this initial mixed profile.
+Schema V4 is experimental and is not part of the published
+v0.1.0-alpha.6 binaries.
 
 ## Source confidentiality
 
@@ -95,7 +107,9 @@ or an immutable filesystem snapshot prepared outside REW.
 Capture refuses to overwrite an existing output path, including
 an existing symbolic link.
 
-Successful output creation uses exclusive file creation.
+Publication writes to a private temporary file, syncs and closes
+it, then uses a no-clobber hard link to publish the final path.
+The completed destination is created with mode `0600`.
 
 This behavior does not amount to a complete guarantee against all
 concurrent output-path replacement attacks.

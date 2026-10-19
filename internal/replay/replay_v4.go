@@ -25,6 +25,26 @@ func RunV4WithOptions(
 	capsulePath string,
 	options Options,
 ) (Result, error) {
+	return runV4WithOptionsInternal(ctx, capsulePath, nil, options)
+}
+
+// RunV4WithOptionsFromFile replays from a caller-owned, already opened
+// capsule descriptor. It does not reopen the pathname.
+// The caller is responsible for closing f.
+func RunV4WithOptionsFromFile(
+	ctx context.Context,
+	f *os.File,
+	options Options,
+) (Result, error) {
+	return runV4WithOptionsInternal(ctx, "", f, options)
+}
+
+func runV4WithOptionsInternal(
+	ctx context.Context,
+	capsulePath string,
+	f *os.File,
+	options Options,
+) (Result, error) {
 	var result Result
 
 	if options.MemoryBytes != 0 {
@@ -38,7 +58,15 @@ func RunV4WithOptions(
 		}
 	}
 
-	verified, err := capsule.ReadVerifiedV4(capsulePath)
+	var verified capsule.VerifiedCapsuleV4
+	var err error
+	if f != nil {
+		verified, err = capsule.ReadVerifiedV4FromFile(f)
+	} else if capsulePath != "" {
+		verified, err = capsule.ReadVerifiedV4(capsulePath)
+	} else {
+		err = fmt.Errorf("nil v4 capsule descriptor")
+	}
 	if err != nil {
 		return result, fmt.Errorf(
 			"replay: verify v4 capsule: %w", err,

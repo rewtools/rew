@@ -20,6 +20,26 @@ func RunMixedV4WithOptions(
 	ctx context.Context,
 	capsulePath string,
 	options Options,
+) (Result, error) {
+	return runMixedV4WithOptionsInternal(ctx, capsulePath, nil, options)
+}
+
+// RunMixedV4WithOptionsFromFile replays from a caller-owned, already opened
+// capsule descriptor. It does not reopen the pathname.
+// The caller is responsible for closing f.
+func RunMixedV4WithOptionsFromFile(
+	ctx context.Context,
+	f *os.File,
+	options Options,
+) (Result, error) {
+	return runMixedV4WithOptionsInternal(ctx, "", f, options)
+}
+
+func runMixedV4WithOptionsInternal(
+	ctx context.Context,
+	capsulePath string,
+	f *os.File,
+	options Options,
 ) (result Result, resultErr error) {
 	if options.MemoryBytes != 0 {
 		switch options.MemoryBytes {
@@ -36,7 +56,15 @@ func RunMixedV4WithOptions(
 		return result, err
 	}
 
-	verified, err := capsule.ReadVerifiedToStoreV4(capsulePath)
+	var verified capsule.VerifiedStoredCapsuleV4
+	var err error
+	if f != nil {
+		verified, err = capsule.ReadVerifiedToStoreV4FromFile(f)
+	} else if capsulePath != "" {
+		verified, err = capsule.ReadVerifiedToStoreV4(capsulePath)
+	} else {
+		err = fmt.Errorf("nil v4 capsule descriptor")
+	}
 	if err != nil {
 		return result, fmt.Errorf(
 			"replay: verify mixed v4 capsule: %w", err,

@@ -1,8 +1,8 @@
 # REW Schema V4: Local Go Module Replacements
 
-Status: Experimental MVP implemented and merged into main; not included in the published alpha.6 release.
+Status: The original local-only V4 MVP was merged into main. The mixed-dependency extension is implemented on the feat/schema-v4-mixed-dependencies development branch and is not yet merged into main or included in the published v0.1.0-alpha.6 release.
 
-This document records the original broader design proposal. Not all proposed capabilities are implemented. The current MVP supports one sibling local replacement, without external dependencies. See docs/schema-v4-security.md for implemented scope and security limitations.
+This document records the original broader design proposal. Not all proposed capabilities are implemented. The development-source V4 implementation now supports one sibling local replacement, optionally with exactly one versioned external Go module and verified offline artifacts. See docs/schema-v4-security.md for the implemented scope and security limitations.
 
 ## 1. Goal
 
